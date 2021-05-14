@@ -27,30 +27,51 @@ type Degrees struct {
 	Degrees []Degree `json:"degrees"`
 }
 
-func GetDegrees() ([]Degree, error) {
-	input := &dynamodb.ScanInput{
+func GetDegreesScanInput() *dynamodb.ScanInput {
+	return &dynamodb.ScanInput{
 		TableName: aws.String(degreesTable),
 	}
+}
 
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	result, err := svc.Scan(input)
-	if err != nil {
-		return nil, err
-	}
-
-	var degrees []Degree
-	for _, item := range result.Items {
+func ProcessDegreeScanResult(resultItems []map[string]*dynamodb.AttributeValue) Degrees {
+	var degrees Degrees
+	for _, item := range resultItems {
 		degree := Degree{}
-		err = dynamodbattribute.UnmarshalMap(item, &degree)
+		err := dynamodbattribute.UnmarshalMap(item, &degree)
 		if err != nil {
 			// TODO: log something here
 		}
 
-		degrees = append(degrees, degree)
+		degrees.Degrees = append(degrees.Degrees, degree)
 	}
 
-	return degrees, nil
+	return degrees
+}
+
+func GetDegreePutInput(degree Degree) (*dynamodb.PutItemInput, error) {
+	item, err := dynamodbattribute.MarshalMap(degree)
+	if err != nil {
+		return nil, err
+	}
+
+	input := &dynamodb.PutItemInput{
+		Item: item,
+		TableName: aws.String(degreesTable),
+	}
+	return input, nil
+}
+
+func GetDegreeDeleteInput(keyObj DegreeKey) (*dynamodb.DeleteItemInput, error) {
+	key, err := dynamodbattribute.MarshalMap(keyObj)
+	if err != nil {
+		return nil, err
+	}
+
+	input := &dynamodb.DeleteItemInput{
+		Key: key,
+		TableName: aws.String(degreesTable),
+	}
+	return input, nil
 }
 
 func PutDegree(degree Degree) error {

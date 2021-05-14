@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
@@ -29,71 +28,49 @@ type Experiences struct {
 	Experiences []Experience `json:"experiences"`
 }
 
-func GetExperiences() ([]Experience, error) {
-	input := &dynamodb.ScanInput{
+func GetExperiencesScanInput() *dynamodb.ScanInput {
+	return &dynamodb.ScanInput{
 		TableName: aws.String(experienceTable),
 	}
+}
 
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	result, err := svc.Scan(input)
-	if err != nil {
-		return nil, err
-	}
-
-	var experiences []Experience
-	for _, item := range result.Items {
+func ProcessExperienceScanResult(resultItems []map[string]*dynamodb.AttributeValue) Experiences {
+	var experiences Experiences
+	for _, item := range resultItems {
 		experience := Experience{}
-		err = dynamodbattribute.UnmarshalMap(item, &experience)
+		err := dynamodbattribute.UnmarshalMap(item, &experience)
 		if err != nil {
 			// TODO: log something here
 		}
 
-		experiences = append(experiences, experience)
+		experiences.Experiences = append(experiences.Experiences, experience)
 	}
 
-	return experiences, nil
+	return experiences
 }
 
-func PutExperience(experience Experience) error {
+func GetExperiencePutInput(experience Experience) (*dynamodb.PutItemInput, error) {
 	item, err := dynamodbattribute.MarshalMap(experience)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	input := &dynamodb.PutItemInput{
 		Item: item,
 		TableName: aws.String(experienceTable),
 	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.PutItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return input, nil
 }
 
-func RemoveExperience(keyObj ExperienceKey) error {
+func GetExperienceDeleteInput(keyObj ExperienceKey) (*dynamodb.DeleteItemInput, error) {
 	key, err := dynamodbattribute.MarshalMap(keyObj)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	input := &dynamodb.DeleteItemInput{
 		Key: key,
 		TableName: aws.String(experienceTable),
 	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.DeleteItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return input, nil
 }
-

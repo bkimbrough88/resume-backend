@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
@@ -22,70 +21,49 @@ type Skills struct {
 	Skills []Skill `json:"skills"`
 }
 
-func GetSkills() ([]Skill, error) {
-	input := &dynamodb.ScanInput{
+func GetSkillsScanInput() *dynamodb.ScanInput {
+	return &dynamodb.ScanInput{
 		TableName: aws.String(skillsTable),
 	}
+}
 
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	result, err := svc.Scan(input)
-	if err != nil {
-		return nil, err
-	}
-
-	var skills []Skill
-	for _, item := range result.Items {
+func ProcessSkillScanResult(resultItems []map[string]*dynamodb.AttributeValue) Skills {
+	var skills Skills
+	for _, item := range resultItems {
 		skill := Skill{}
-		err = dynamodbattribute.UnmarshalMap(item, &skill)
+		err := dynamodbattribute.UnmarshalMap(item, &skill)
 		if err != nil {
 			// TODO: log something here
 		}
 
-		skills = append(skills, skill)
+		skills.Skills = append(skills.Skills, skill)
 	}
 
-	return skills, nil
+	return skills
 }
 
-func PutSkill(skill Skill) error {
+func GetSkillPutInput(skill Skill) (*dynamodb.PutItemInput, error) {
 	item, err := dynamodbattribute.MarshalMap(skill)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	input := &dynamodb.PutItemInput{
 		Item: item,
 		TableName: aws.String(skillsTable),
 	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.PutItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return input, nil
 }
 
-func RemoveSkill(keyObj SkillKey) error {
+func GetSkillDeleteInput(keyObj SkillKey) (*dynamodb.DeleteItemInput, error) {
 	key, err := dynamodbattribute.MarshalMap(keyObj)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	input := &dynamodb.DeleteItemInput{
 		Key: key,
 		TableName: aws.String(skillsTable),
 	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.DeleteItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return input, nil
 }

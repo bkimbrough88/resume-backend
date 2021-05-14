@@ -1,9 +1,7 @@
 package pkg
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
@@ -21,47 +19,33 @@ type GeneralInfo struct {
 	SurName string `json:"sur_name"`
 }
 
-func GetGeneralInfo() (*GeneralInfo, error) {
-	input := &dynamodb.ScanInput{
+func GetGeneralInfoScanInput() *dynamodb.ScanInput {
+	return &dynamodb.ScanInput{
 		TableName: aws.String(generalInfoTable),
-	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	result, err := svc.Scan(input)
-	if err != nil {
-		return nil, err
-	}
-
-	if *result.Count >= 1 {
-		generalInfo := GeneralInfo{}
-		err = dynamodbattribute.UnmarshalMap(result.Items[0], &generalInfo)
-		if err != nil {
-			// TODO: log something here
-		}
-		return &generalInfo, nil
-	} else {
-		return nil, fmt.Errorf("no items exist in the %s table", generalInfoTable)
 	}
 }
 
-func PutGeneralInfo(generalInfo GeneralInfo) error {
+func ProcessGeneralInfoScanResult(resultItems []map[string]*dynamodb.AttributeValue) GeneralInfo {
+	generalInfo := GeneralInfo{}
+	if len(resultItems) >= 1 {
+		err := dynamodbattribute.UnmarshalMap(resultItems[0], &generalInfo)
+		if err != nil {
+			// TODO: log something here
+		}
+	}
+
+	return generalInfo
+}
+
+func GetGeneralInfoPutInput(generalInfo GeneralInfo) (*dynamodb.PutItemInput, error) {
 	item, err := dynamodbattribute.MarshalMap(generalInfo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	input := &dynamodb.PutItemInput{
 		Item: item,
 		TableName: aws.String(generalInfoTable),
 	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.PutItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return input, nil
 }
