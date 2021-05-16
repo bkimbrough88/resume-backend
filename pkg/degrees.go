@@ -1,25 +1,26 @@
 package pkg
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
 
-const degreesTable = "ResumeDegrees"
+const (
+	degrees = "Degrees"
+)
 
 type Degree struct {
-	Degree string `json:"degree"`
-	EndYear int `json:"end_year,omitempty"`
-	Major string `json:"major"`
-	School string `json:"school"`
-	StartYear int `json:"start_year"`
+	Degree    string `json:"degree"`
+	Major     string `json:"major"`
+	School    string `json:"school"`
+	StartYear int    `json:"start_year"`
+	EndYear   int    `json:"end_year,omitempty"`
 }
 
 type DegreeKey struct {
 	Degree string `json:"degree"`
-	Major string `json:"major"`
+	Major  string `json:"major"`
 	School string `json:"school"`
 }
 
@@ -27,91 +28,24 @@ type Degrees struct {
 	Degrees []Degree `json:"degrees"`
 }
 
-func GetDegreesScanInput() *dynamodb.ScanInput {
-	return &dynamodb.ScanInput{
-		TableName: aws.String(degreesTable),
-	}
-}
-
-func ProcessDegreeScanResult(resultItems []map[string]*dynamodb.AttributeValue) Degrees {
-	var degrees Degrees
-	for _, item := range resultItems {
-		degree := Degree{}
-		err := dynamodbattribute.UnmarshalMap(item, &degree)
-		if err != nil {
-			// TODO: log something here
-		}
-
-		degrees.Degrees = append(degrees.Degrees, degree)
+func compareDegrees(builder expression.UpdateBuilder, currentDegree Degree, updatedDegree Degree, idx int) {
+	if currentDegree.Degree != updatedDegree.Degree {
+		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "Degree")), expression.Value(updatedDegree.Degree))
 	}
 
-	return degrees
-}
-
-func GetDegreePutInput(degree Degree) (*dynamodb.PutItemInput, error) {
-	item, err := dynamodbattribute.MarshalMap(degree)
-	if err != nil {
-		return nil, err
+	if currentDegree.Major != updatedDegree.Major {
+		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "Major")), expression.Value(updatedDegree.Major))
 	}
 
-	input := &dynamodb.PutItemInput{
-		Item: item,
-		TableName: aws.String(degreesTable),
-	}
-	return input, nil
-}
-
-func GetDegreeDeleteInput(keyObj DegreeKey) (*dynamodb.DeleteItemInput, error) {
-	key, err := dynamodbattribute.MarshalMap(keyObj)
-	if err != nil {
-		return nil, err
+	if currentDegree.School != updatedDegree.School {
+		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "School")), expression.Value(updatedDegree.School))
 	}
 
-	input := &dynamodb.DeleteItemInput{
-		Key: key,
-		TableName: aws.String(degreesTable),
-	}
-	return input, nil
-}
-
-func PutDegree(degree Degree) error {
-	item, err := dynamodbattribute.MarshalMap(degree)
-	if err != nil {
-		return err
+	if currentDegree.StartYear != updatedDegree.StartYear {
+		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "StartYear")), expression.Value(updatedDegree.StartYear))
 	}
 
-	input := &dynamodb.PutItemInput{
-		Item: item,
-		TableName: aws.String(degreesTable),
+	if currentDegree.EndYear != updatedDegree.EndYear {
+		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "EndYear")), expression.Value(updatedDegree.EndYear))
 	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.PutItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func RemoveDegree(keyObj DegreeKey) error {
-	key, err := dynamodbattribute.MarshalMap(keyObj)
-	if err != nil {
-		return err
-	}
-
-	input := &dynamodb.DeleteItemInput{
-		Key: key,
-		TableName: aws.String(degreesTable),
-	}
-
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-	_, err = svc.DeleteItem(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
