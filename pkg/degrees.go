@@ -24,28 +24,27 @@ type DegreeKey struct {
 	School string `json:"school"`
 }
 
-type Degrees struct {
-	Degrees []Degree `json:"degrees"`
-}
-
-func compareDegrees(builder expression.UpdateBuilder, currentDegree Degree, updatedDegree Degree, idx int) {
+func compareDegrees(updateBuilder expression.UpdateBuilder, currentDegree Degree, updatedDegree Degree, idx int) expression.UpdateBuilder {
+	myUpdateBuilder := updateBuilder
 	if currentDegree.Degree != updatedDegree.Degree {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "Degree")), expression.Value(updatedDegree.Degree))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "Degree")), expression.Value(updatedDegree.Degree))
 	}
 
 	if currentDegree.Major != updatedDegree.Major {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "Major")), expression.Value(updatedDegree.Major))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "Major")), expression.Value(updatedDegree.Major))
 	}
 
 	if currentDegree.School != updatedDegree.School {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "School")), expression.Value(updatedDegree.School))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "School")), expression.Value(updatedDegree.School))
 	}
 
 	if currentDegree.StartYear != updatedDegree.StartYear {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "StartYear")), expression.Value(updatedDegree.StartYear))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "StartYear")), expression.Value(updatedDegree.StartYear))
 	}
 
 	if currentDegree.EndYear != updatedDegree.EndYear {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "EndYear")), expression.Value(updatedDegree.EndYear))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, degrees, idx, "EndYear")), expression.Value(updatedDegree.EndYear))
 	}
+
+	return myUpdateBuilder
 }

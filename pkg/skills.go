@@ -19,16 +19,15 @@ type SkillKey struct {
 	Name string `json:"name"`
 }
 
-type Skills struct {
-	Skills []Skill `json:"skills"`
-}
-
-func compareSkills(builder expression.UpdateBuilder, currentSkill Skill, updatedSkill Skill, idx int) {
+func compareSkills(updateBuilder expression.UpdateBuilder, currentSkill Skill, updatedSkill Skill, idx int) expression.UpdateBuilder {
+	myUpdateBuilder := updateBuilder
 	if currentSkill.Name != updatedSkill.Name {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, skills, idx, "Name")), expression.Value(updatedSkill.Name))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, skills, idx, "Name")), expression.Value(updatedSkill.Name))
 	}
 
 	if currentSkill.YearsOfExperience != updatedSkill.YearsOfExperience {
-		builder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, skills, idx, "YearsOfExperience")), expression.Value(updatedSkill.YearsOfExperience))
+		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, skills, idx, "YearsOfExperience")), expression.Value(updatedSkill.YearsOfExperience))
 	}
+
+	return myUpdateBuilder
 }
