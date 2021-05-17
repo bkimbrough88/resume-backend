@@ -54,19 +54,19 @@ func compareExperience(updateBuilder expression.UpdateBuilder, currentExperience
 
 	currentResponsibilitiesCount := len(currentExperience.Responsibilities)
 	updatedResponsibilitiesCount := len(updatedExperience.Responsibilities)
-	for rIdx, currentResponsibility := range currentExperience.Responsibilities {
-		if idx < updatedResponsibilitiesCount-1 {
-			if currentResponsibility != updatedExperience.Responsibilities[rIdx] {
-				myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", rIdx)), expression.Value(updatedExperience.Responsibilities[rIdx]))
+	for responsibilityIdx, currentResponsibility := range currentExperience.Responsibilities {
+		if responsibilityIdx < updatedResponsibilitiesCount {
+			if currentResponsibility != updatedExperience.Responsibilities[responsibilityIdx] {
+				myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(updatedExperience.Responsibilities[responsibilityIdx]))
 			}
 		} else {
-			myUpdateBuilder = myUpdateBuilder.Remove(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", rIdx)))
+			myUpdateBuilder = myUpdateBuilder.Remove(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)))
 		}
 	}
-	for rIdx := currentResponsibilitiesCount; rIdx < updatedResponsibilitiesCount; rIdx++ {
-		newResponsibility, _ := dynamodbattribute.MarshalMap(updatedExperience.Responsibilities[rIdx])
+	for responsibilityIdx := currentResponsibilitiesCount; responsibilityIdx < updatedResponsibilitiesCount; responsibilityIdx++ {
+		newResponsibility, _ := dynamodbattribute.MarshalMap(updatedExperience.Responsibilities[responsibilityIdx])
 
-		myUpdateBuilder = myUpdateBuilder.Add(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", rIdx)), expression.Value(newResponsibility))
+		myUpdateBuilder = myUpdateBuilder.Add(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(newResponsibility))
 	}
 
 	return myUpdateBuilder

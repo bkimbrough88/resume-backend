@@ -3,7 +3,8 @@ package pkg
 import "strings"
 
 func getValueKey(nameKey string, update string) string {
-	startIdx := strings.Index(update, nameKey) + len(nameKey) + 3
+	keyIdx := strings.Index(update, nameKey)
+	startIdx := keyIdx + strings.Index(update[keyIdx:], " = ") + 3
 	endIdx := strings.Index(update[startIdx:], ",") + startIdx
 
 	if endIdx > startIdx {

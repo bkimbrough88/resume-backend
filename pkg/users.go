@@ -216,7 +216,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	currentCertsCount := len(currentUser.Certifications)
 	updatedCertsCount := len(updatedUser.Certifications)
 	for idx, currentCert := range currentUser.Certifications {
-		if idx < updatedCertsCount-1 {
+		if idx < updatedCertsCount {
 			updateBuilder = compareCertifications(updateBuilder, currentCert, updatedUser.Certifications[idx], idx)
 		} else {
 			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
@@ -234,7 +234,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	currentDegreesCount := len(currentUser.Degrees)
 	updatedDegreesCount := len(updatedUser.Degrees)
 	for idx, currentDegree := range currentUser.Degrees {
-		if idx < updatedDegreesCount-1 {
+		if idx < updatedDegreesCount {
 			updateBuilder = compareDegrees(updateBuilder, currentDegree, updatedUser.Degrees[idx], idx)
 		} else {
 			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)))
@@ -252,7 +252,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	currentExperienceCount := len(currentUser.Experience)
 	updatedExperienceCount := len(updatedUser.Experience)
 	for idx, currentExperience := range currentUser.Experience {
-		if idx < updatedExperienceCount-1 {
+		if idx < updatedExperienceCount {
 			updateBuilder = compareExperience(updateBuilder, currentExperience, updatedUser.Experience[idx], idx)
 		} else {
 			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)))
@@ -270,7 +270,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	currentSkillsCount := len(currentUser.Skills)
 	updatedSkillsCount := len(updatedUser.Skills)
 	for idx, currentSkill := range currentUser.Skills {
-		if idx < updatedSkillsCount-1 {
+		if idx < updatedSkillsCount {
 			updateBuilder = compareSkills(updateBuilder, currentSkill, updatedUser.Skills[idx], idx)
 		} else {
 			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))

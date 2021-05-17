@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
@@ -83,6 +84,18 @@ func TestCompareExperience_NoneMatching(t *testing.T) {
 		t.Errorf("Expected to have 9 values, but got %d", len(expr.Values()))
 	}
 
+	if !strings.Contains(*expr.Update(), "SET") {
+		t.Errorf("Expected update expression to SET values")
+	}
+
+	if strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Did not expect update expression to ADD values")
+	}
+
+	if strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Did not expect update expression to REMOVE values")
+	}
+
 	// Exit if the counts are off
 	if t.Failed() {
 		t.FailNow()
@@ -118,8 +131,274 @@ func TestCompareExperience_NoneMatching(t *testing.T) {
 			} else if experience2.EndYear != actualNumber {
 				t.Errorf("Expected EndYear to be %d, but was %d", experience2.EndYear, actualNumber)
 			}
-		}
+		} else if *name == "Responsibilities" {
+			found := false
+			for _, expectedResponsibility := range experience2.Responsibilities {
+				if expectedResponsibility == *actualValue.S {
+					found = true
+					continue
+				}
+			}
 
-		//TODO: Check for responsibilities
+			if !found {
+				t.Errorf("Got the responsibility %s, but it was not found in the updated object", *actualValue.S)
+			}
+		}
 	}
+}
+
+func TestCompareExperience_AddResponsibility(t *testing.T) {
+	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
+
+	experience1 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"foo",
+			"bar",
+		},
+	}
+
+	experience2 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"foo",
+			"bar",
+			"baz",
+		},
+	}
+
+	compareExperience(updateBuilder, experience1, experience2, 0)
+
+	expr, err := expression.NewBuilder().WithUpdate(updateBuilder).Build()
+	if err != nil {
+		t.Fatalf("Could not build expression with resulting updateBuilder. Error: %s", err.Error())
+	}
+
+	if len(expr.Names()) != 3 {
+		t.Errorf("Expected to have 3 names, but got %d", len(expr.Names()))
+	}
+
+	if len(expr.Values()) != 2 {
+		t.Errorf("Expected to have 2 values, but got %d", len(expr.Values()))
+	}
+
+	if !strings.Contains(*expr.Update(), "SET #0 = :0\n") && *expr.Names()["#0"] == "foo" {
+		t.Errorf("Expected update expression to only SET initializer value")
+	}
+
+	if !strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Expected update expression to ADD values")
+	}
+
+	if strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Did not expect update expression to REMOVE values")
+	}
+
+	// Exit if the counts are off
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// TODO: Test that updates are what are expected
+}
+
+func TestCompareExperience_ModifyAndAddResponsibility(t *testing.T) {
+	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
+
+	experience1 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"foo",
+			"bar",
+		},
+	}
+
+	experience2 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"biz",
+			"bar",
+			"baz",
+		},
+	}
+
+	compareExperience(updateBuilder, experience1, experience2, 0)
+
+	expr, err := expression.NewBuilder().WithUpdate(updateBuilder).Build()
+	if err != nil {
+		t.Fatalf("Could not build expression with resulting updateBuilder. Error: %s", err.Error())
+	}
+
+	if len(expr.Names()) != 3 {
+		t.Errorf("Expected to have 3 names, but got %d", len(expr.Names()))
+	}
+
+	if len(expr.Values()) != 3 {
+		t.Errorf("Expected to have 3 values, but got %d", len(expr.Values()))
+	}
+
+	if !strings.Contains(*expr.Update(), "SET") {
+		t.Errorf("Expected update expression to SET values")
+	}
+
+	if !strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Expected update expression to ADD values")
+	}
+
+	if strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Did not expect update expression to REMOVE values")
+	}
+
+	// Exit if the counts are off
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// TODO: Test that updates are what are expected
+}
+
+func TestCompareExperience_RemoveResponsibility(t *testing.T) {
+	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
+
+	experience1 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"foo",
+			"bar",
+		},
+	}
+
+	experience2 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"foo",
+		},
+	}
+
+	compareExperience(updateBuilder, experience1, experience2, 0)
+
+	expr, err := expression.NewBuilder().WithUpdate(updateBuilder).Build()
+	if err != nil {
+		t.Fatalf("Could not build expression with resulting updateBuilder. Error: %s", err.Error())
+	}
+
+	if len(expr.Names()) != 3 {
+		t.Errorf("Expected to have 3 names, but got %d", len(expr.Names()))
+	}
+
+	if len(expr.Values()) != 1 {
+		t.Errorf("Expected to have 1 value, but got %d", len(expr.Values()))
+	}
+
+	if !strings.Contains(*expr.Update(), "SET #0 = :0\n") && *expr.Names()["#0"] == "foo" {
+		t.Errorf("Expected update expression to only SET initializer value")
+	}
+
+	if strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Did not expect update expression to ADD values")
+	}
+
+	if !strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Expected update expression to REMOVE values")
+	}
+
+	// Exit if the counts are off
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// TODO: Test that updates are what are expected
+}
+
+func TestCompareExperience_ModifyAndRemoveResponsibility(t *testing.T) {
+	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
+
+	experience1 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"foo",
+			"bar",
+		},
+	}
+
+	experience2 := Experience{
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
+		Responsibilities: []string{
+			"baz",
+		},
+	}
+
+	compareExperience(updateBuilder, experience1, experience2, 0)
+
+	expr, err := expression.NewBuilder().WithUpdate(updateBuilder).Build()
+	if err != nil {
+		t.Fatalf("Could not build expression with resulting updateBuilder. Error: %s", err.Error())
+	}
+
+	if len(expr.Names()) != 3 {
+		t.Errorf("Expected to have 3 names, but got %d", len(expr.Names()))
+	}
+
+	if len(expr.Values()) != 2 {
+		t.Errorf("Expected to have 2 values, but got %d", len(expr.Values()))
+	}
+
+	if !strings.Contains(*expr.Update(), "SET") {
+		t.Errorf("Expected update expression to SET values")
+	}
+
+	if strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Did not expect update expression to ADD values")
+	}
+
+	if !strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Expected update expression to REMOVE values")
+	}
+
+	// Exit if the counts are off
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// TODO: Test that updates are what are expected
 }

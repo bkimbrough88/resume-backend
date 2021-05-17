@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
@@ -57,6 +58,18 @@ func TestCompareSkills_NoneMatching(t *testing.T) {
 
 	if len(expr.Values()) != 3 {
 		t.Errorf("Expected to have 3 values, but got %d", len(expr.Values()))
+	}
+
+	if !strings.Contains(*expr.Update(), "SET") {
+		t.Errorf("Expected update expression to SET values")
+	}
+
+	if strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Did not expect update expression to ADD values")
+	}
+
+	if strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
 	// Exit if the counts are off
