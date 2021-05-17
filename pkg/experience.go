@@ -26,30 +26,29 @@ type ExperienceKey struct {
 	JobTitle string `json:"job_title"`
 }
 
-func compareExperience(updateBuilder expression.UpdateBuilder, currentExperience Experience, updatedExperience Experience, idx int) expression.UpdateBuilder {
-	myUpdateBuilder := updateBuilder
+func compareExperience(updateBuilder expression.UpdateBuilder, currentExperience Experience, updatedExperience Experience, idx int) {
 	if currentExperience.Company != updatedExperience.Company {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "Company")), expression.Value(updatedExperience.Company))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "Company")), expression.Value(updatedExperience.Company))
 	}
 
 	if currentExperience.JobTitle != updatedExperience.JobTitle {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "JobTitle")), expression.Value(updatedExperience.JobTitle))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "JobTitle")), expression.Value(updatedExperience.JobTitle))
 	}
 
 	if currentExperience.StartMonth != updatedExperience.StartMonth {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "StartMonth")), expression.Value(updatedExperience.StartMonth))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "StartMonth")), expression.Value(updatedExperience.StartMonth))
 	}
 
 	if currentExperience.StartYear != updatedExperience.StartYear {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "StartYear")), expression.Value(updatedExperience.StartYear))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "StartYear")), expression.Value(updatedExperience.StartYear))
 	}
 
 	if currentExperience.EndMonth != updatedExperience.EndMonth {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "EndMonth")), expression.Value(updatedExperience.EndMonth))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "EndMonth")), expression.Value(updatedExperience.EndMonth))
 	}
 
 	if currentExperience.EndYear != updatedExperience.EndYear {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "EndYear")), expression.Value(updatedExperience.EndYear))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, experience, idx, "EndYear")), expression.Value(updatedExperience.EndYear))
 	}
 
 	currentResponsibilitiesCount := len(currentExperience.Responsibilities)
@@ -57,17 +56,15 @@ func compareExperience(updateBuilder expression.UpdateBuilder, currentExperience
 	for responsibilityIdx, currentResponsibility := range currentExperience.Responsibilities {
 		if responsibilityIdx < updatedResponsibilitiesCount {
 			if currentResponsibility != updatedExperience.Responsibilities[responsibilityIdx] {
-				myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(updatedExperience.Responsibilities[responsibilityIdx]))
+				updateBuilder.Set(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(updatedExperience.Responsibilities[responsibilityIdx]))
 			}
 		} else {
-			myUpdateBuilder = myUpdateBuilder.Remove(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)))
+			updateBuilder.Remove(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)))
 		}
 	}
 	for responsibilityIdx := currentResponsibilitiesCount; responsibilityIdx < updatedResponsibilitiesCount; responsibilityIdx++ {
 		newResponsibility, _ := dynamodbattribute.MarshalMap(updatedExperience.Responsibilities[responsibilityIdx])
 
-		myUpdateBuilder = myUpdateBuilder.Add(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(newResponsibility))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(newResponsibility))
 	}
-
-	return myUpdateBuilder
 }

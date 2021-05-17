@@ -21,23 +21,20 @@ type CertificationKey struct {
 	CertificationName string `json:"certification_name"`
 }
 
-func compareCertifications(updateBuilder expression.UpdateBuilder, currentCert Certification, updatedCert Certification, idx int) expression.UpdateBuilder {
-	myUpdateBuilder := updateBuilder
+func compareCertifications(updateBuilder expression.UpdateBuilder, currentCert Certification, updatedCert Certification, idx int) {
 	if currentCert.Name != updatedCert.Name {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "Name")), expression.Value(updatedCert.Name))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "Name")), expression.Value(updatedCert.Name))
 	}
 
 	if currentCert.DateAchieved != updatedCert.DateAchieved {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "DateAchieved")), expression.Value(updatedCert.DateAchieved))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "DateAchieved")), expression.Value(updatedCert.DateAchieved))
 	}
 
 	if currentCert.BadgeLink != updatedCert.BadgeLink {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "BadgeLink")), expression.Value(updatedCert.BadgeLink))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "BadgeLink")), expression.Value(updatedCert.BadgeLink))
 	}
 
 	if currentCert.DateExpires != updatedCert.DateExpires {
-		myUpdateBuilder = myUpdateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "DateExpires")), expression.Value(updatedCert.DateExpires))
+		updateBuilder.Set(expression.Name(fmt.Sprintf(listElementNameFormat, certifications, idx, "DateExpires")), expression.Value(updatedCert.DateExpires))
 	}
-
-	return myUpdateBuilder
 }

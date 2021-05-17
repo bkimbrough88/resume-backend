@@ -182,44 +182,44 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	updateBuilder := expression.Set(expression.Name("LastUpdated"), expression.Value(time.Now().UTC()))
 
 	if currentUser.Email != updatedUser.Email {
-		updateBuilder = updateBuilder.Set(expression.Name("Email"), expression.Value(updatedUser.Email))
+		updateBuilder.Set(expression.Name("Email"), expression.Value(updatedUser.Email))
 	}
 
 	if currentUser.Github != updatedUser.Github {
-		updateBuilder = updateBuilder.Set(expression.Name("Github"), expression.Value(updatedUser.Github))
+		updateBuilder.Set(expression.Name("Github"), expression.Value(updatedUser.Github))
 	}
 
 	if currentUser.GivenName != updatedUser.GivenName {
-		updateBuilder = updateBuilder.Set(expression.Name("GivenName"), expression.Value(updatedUser.GivenName))
+		updateBuilder.Set(expression.Name("GivenName"), expression.Value(updatedUser.GivenName))
 	}
 
 	if currentUser.Location != updatedUser.Location {
-		updateBuilder = updateBuilder.Set(expression.Name("Location"), expression.Value(updatedUser.Location))
+		updateBuilder.Set(expression.Name("Location"), expression.Value(updatedUser.Location))
 	}
 
 	if currentUser.Linkedin != updatedUser.Linkedin {
-		updateBuilder = updateBuilder.Set(expression.Name("Linkedin"), expression.Value(updatedUser.Linkedin))
+		updateBuilder.Set(expression.Name("Linkedin"), expression.Value(updatedUser.Linkedin))
 	}
 
 	if currentUser.PhoneNumber != updatedUser.PhoneNumber {
-		updateBuilder = updateBuilder.Set(expression.Name("PhoneNumber"), expression.Value(updatedUser.PhoneNumber))
+		updateBuilder.Set(expression.Name("PhoneNumber"), expression.Value(updatedUser.PhoneNumber))
 	}
 
 	if currentUser.Summary != updatedUser.Summary {
-		updateBuilder = updateBuilder.Set(expression.Name("Summary"), expression.Value(updatedUser.Summary))
+		updateBuilder.Set(expression.Name("Summary"), expression.Value(updatedUser.Summary))
 	}
 
 	if currentUser.SurName != updatedUser.SurName {
-		updateBuilder = updateBuilder.Set(expression.Name("SurName"), expression.Value(updatedUser.SurName))
+		updateBuilder.Set(expression.Name("SurName"), expression.Value(updatedUser.SurName))
 	}
 
 	currentCertsCount := len(currentUser.Certifications)
 	updatedCertsCount := len(updatedUser.Certifications)
 	for idx, currentCert := range currentUser.Certifications {
 		if idx < updatedCertsCount {
-			updateBuilder = compareCertifications(updateBuilder, currentCert, updatedUser.Certifications[idx], idx)
+			compareCertifications(updateBuilder, currentCert, updatedUser.Certifications[idx], idx)
 		} else {
-			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
+			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
 		}
 	}
 	for idx := currentCertsCount; idx < updatedCertsCount; idx++ {
@@ -228,16 +228,16 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 			return nil, err
 		}
 
-		updateBuilder = updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)), expression.Value(newCert))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)), expression.Value(newCert))
 	}
 
 	currentDegreesCount := len(currentUser.Degrees)
 	updatedDegreesCount := len(updatedUser.Degrees)
 	for idx, currentDegree := range currentUser.Degrees {
 		if idx < updatedDegreesCount {
-			updateBuilder = compareDegrees(updateBuilder, currentDegree, updatedUser.Degrees[idx], idx)
+			compareDegrees(updateBuilder, currentDegree, updatedUser.Degrees[idx], idx)
 		} else {
-			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)))
+			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)))
 		}
 	}
 	for idx := currentDegreesCount; idx < updatedDegreesCount; idx++ {
@@ -246,16 +246,16 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 			return nil, err
 		}
 
-		updateBuilder = updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(newDegree))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(newDegree))
 	}
 
 	currentExperienceCount := len(currentUser.Experience)
 	updatedExperienceCount := len(updatedUser.Experience)
 	for idx, currentExperience := range currentUser.Experience {
 		if idx < updatedExperienceCount {
-			updateBuilder = compareExperience(updateBuilder, currentExperience, updatedUser.Experience[idx], idx)
+			compareExperience(updateBuilder, currentExperience, updatedUser.Experience[idx], idx)
 		} else {
-			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)))
+			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)))
 		}
 	}
 	for idx := currentExperienceCount; idx < updatedExperienceCount; idx++ {
@@ -264,16 +264,16 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 			return nil, err
 		}
 
-		updateBuilder = updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)), expression.Value(newExperience))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)), expression.Value(newExperience))
 	}
 
 	currentSkillsCount := len(currentUser.Skills)
 	updatedSkillsCount := len(updatedUser.Skills)
 	for idx, currentSkill := range currentUser.Skills {
 		if idx < updatedSkillsCount {
-			updateBuilder = compareSkills(updateBuilder, currentSkill, updatedUser.Skills[idx], idx)
+			compareSkills(updateBuilder, currentSkill, updatedUser.Skills[idx], idx)
 		} else {
-			updateBuilder = updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
+			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
 		}
 	}
 	for idx := currentSkillsCount; idx < updatedSkillsCount; idx++ {
@@ -282,7 +282,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 			return nil, err
 		}
 
-		updateBuilder = updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(newSkills))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(newSkills))
 	}
 
 	return &updateBuilder, nil
