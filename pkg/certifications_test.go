@@ -24,12 +24,41 @@ func TestCompareCertifications_Matching(t *testing.T) {
 		t.Fatalf("Could not build expression with resulting updateBuilder. Error: %s", err.Error())
 	}
 
-	if len(expr.Names()) > 1 && *expr.Names()["#0"] == "foo" {
-		t.Errorf("Expected to have 0 names, but got %d", len(expr.Names()))
+	if len(expr.Names()) != 1 {
+		t.Errorf("Expected to have 1 name, but got %d", len(expr.Names()))
 	}
 
-	if len(expr.Values()) > 1 && *expr.Values()[":0"].S != "bar" {
-		t.Errorf("Expected to have 0 values, but got %d", len(expr.Values()))
+	if len(expr.Values()) != 1 {
+		t.Errorf("Expected to have 1 value, but got %d", len(expr.Values()))
+	}
+
+	// Exit if the counts are off
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	if !strings.Contains(*expr.Update(), "SET") {
+		t.Errorf("Expected update expression to SET values")
+	}
+
+	if strings.Contains(*expr.Update(), "ADD") {
+		t.Errorf("Did not expect update expression to ADD values")
+	}
+
+	if strings.Contains(*expr.Update(), "REMOVE") {
+		t.Errorf("Did not expect update expression to REMOVE values")
+	}
+
+	if *expr.Names()["#0"] != "foo" {
+		t.Errorf("Expected names to only contain 'foo', but was '%s'", *expr.Names()["#0"])
+	}
+
+	if expr.Values()[":0"].S == nil {
+		t.Fatal("Expected value be a string, but the string value was null")
+	}
+
+	if *expr.Values()[":0"].S != "bar" {
+		t.Fatalf("Expected values to only contain 'bar', but was '%s'", *expr.Values()[":0"].S)
 	}
 }
 
@@ -65,6 +94,11 @@ func TestCompareCertifications_NoneMatching(t *testing.T) {
 		t.Errorf("Expected to have 5 values, but got %d", len(expr.Values()))
 	}
 
+	// Exit if the counts are off
+	if t.Failed() {
+		t.FailNow()
+	}
+
 	if !strings.Contains(*expr.Update(), "SET") {
 		t.Errorf("Expected update expression to SET values")
 	}
@@ -75,11 +109,6 @@ func TestCompareCertifications_NoneMatching(t *testing.T) {
 
 	if strings.Contains(*expr.Update(), "REMOVE") {
 		t.Errorf("Did not expect update expression to REMOVE values")
-	}
-
-	// Exit if the counts are off
-	if t.Failed() {
-		t.FailNow()
 	}
 
 	for key, name := range expr.Names() {
