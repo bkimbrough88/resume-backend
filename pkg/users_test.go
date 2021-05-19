@@ -234,19 +234,61 @@ func TestGetUserUpdateBuilder_NoneMatch(t *testing.T) {
 		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
-	// TODO: Test that updates are what are expected
+	for key, name := range expr.Names() {
+		actualValue := expr.Values()[getValueKey(key, *expr.Update())]
+		if *name == "Email" {
+			if user2.Email != *actualValue.S {
+				t.Errorf("Expected Email to be %s, but was %s", user2.Email, *actualValue.S)
+			}
+		} else if *name == "Github" {
+			if user2.Github != *actualValue.S {
+				t.Errorf("Expected Github to be %s, but was %s", user2.Github, *actualValue.S)
+			}
+		} else if *name == "GivenName" {
+			if user2.GivenName != *actualValue.S {
+				t.Errorf("Expected GivenName to be %s, but was %s", user2.GivenName, *actualValue.S)
+			}
+		} else if *name == "Location" {
+			if user2.Location != *actualValue.S {
+				t.Errorf("Expected Location to be %s, but was %s", user2.Location, *actualValue.S)
+			}
+		} else if *name == "Linkedin" {
+			if user2.Linkedin != *actualValue.S {
+				t.Errorf("Expected Linkedin to be %s, but was %s", user2.Linkedin, *actualValue.S)
+			}
+		} else if *name == "PhoneNumber" {
+			if user2.PhoneNumber != *actualValue.S {
+				t.Errorf("Expected PhoneNumber to be %s, but was %s", user2.PhoneNumber, *actualValue.S)
+			}
+		} else if *name == "Summary" {
+			if user2.Summary != *actualValue.S {
+				t.Errorf("Expected Summary to be %s, but was %s", user2.Summary, *actualValue.S)
+			}
+		} else if *name == "SurName" {
+			if user2.SurName != *actualValue.S {
+				t.Errorf("Expected SurName to be %s, but was %s", user2.SurName, *actualValue.S)
+			}
+		}
+	}
 }
 
 /** TEST HELPERS  */
 
 func getValueKey(nameKey string, update string) string {
 	keyIdx := strings.Index(update, nameKey)
-	startIdx := keyIdx + strings.Index(update[keyIdx:], " = ") + 3
-	endIdx := strings.Index(update[startIdx:], ",") + startIdx
+	startIdx := keyIdx + strings.Index(update[keyIdx:], ":")
 
-	if endIdx > startIdx {
-		return update[startIdx:endIdx]
+	commaIdx := strings.Index(update[startIdx:], ",")
+	newLineIdx := strings.Index(update[startIdx:], "\n")
+
+	var endIdx int
+	if commaIdx < newLineIdx && commaIdx != -1 {
+		endIdx = startIdx + commaIdx
+	} else if newLineIdx != -1 {
+		endIdx = startIdx + newLineIdx
 	} else {
-		return strings.TrimSpace(update[startIdx:])
+		endIdx = len(update)
 	}
+
+	return update[startIdx:endIdx]
 }

@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -226,7 +227,7 @@ func TestCompareExperience_AddResponsibility(t *testing.T) {
 		t.FailNow()
 	}
 
-	if !strings.Contains(*expr.Update(), "SET #0 = :0\n") && *expr.Names()["#0"] == "foo" {
+	if !strings.Contains(*expr.Update(), "SET #2 = :1\n") && *expr.Names()["#2"] == "foo" && *expr.Values()[":1"].S == "bar" {
 		t.Errorf("Expected update expression to only SET initializer value")
 	}
 
@@ -238,7 +239,23 @@ func TestCompareExperience_AddResponsibility(t *testing.T) {
 		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
-	// TODO: Test that updates are what are expected
+	for key, name := range expr.Names() {
+		if *name == "Responsibilities" {
+			updateStatements := strings.Split(*expr.Update(), "\n")
+			for _, statement := range updateStatements {
+				if strings.Contains(statement, "ADD") {
+					if !strings.Contains(statement, key) {
+						t.Fatal("Expected the responsibility to be added, but was not found in the ADD statement")
+					}
+
+					actualValue := expr.Values()[getValueKey(key, statement)]
+					if experience2.Responsibilities[2] != *actualValue.S {
+						t.Errorf("Expected added responsibility to be '%s', but was '%s'", experience2.Responsibilities[2], *actualValue.S)
+					}
+				}
+			}
+		}
+	}
 }
 
 func TestCompareExperience_ModifyAndAddResponsibility(t *testing.T) {
@@ -303,7 +320,32 @@ func TestCompareExperience_ModifyAndAddResponsibility(t *testing.T) {
 		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
-	// TODO: Test that updates are what are expected
+	for key, name := range expr.Names() {
+		if *name == "Responsibilities" {
+			updateStatements := strings.Split(*expr.Update(), "\n")
+			for _, statement := range updateStatements {
+				if strings.Contains(statement, "ADD") {
+					if !strings.Contains(statement, key) {
+						t.Fatal("Expected the responsibility to be added, but was not found in the ADD statement")
+					}
+
+					actualValue := expr.Values()[getValueKey(key, statement)]
+					if experience2.Responsibilities[2] != *actualValue.S {
+						t.Errorf("Expected added responsibility to be '%s', but was '%s'", experience2.Responsibilities[2], *actualValue.S)
+					}
+				} else if strings.Contains(statement, "SET") {
+					if !strings.Contains(statement, key) {
+						t.Fatal("Expected the responsibilities to be updated, but was not found in the SET statement")
+					}
+
+					actualValue := expr.Values()[getValueKey(key, statement)]
+					if experience2.Responsibilities[0] != *actualValue.S {
+						t.Errorf("Expected updated responsibility to be '%s', but was '%s'", experience2.Responsibilities[0], *actualValue.S)
+					}
+				}
+			}
+		}
+	}
 }
 
 func TestCompareExperience_RemoveResponsibility(t *testing.T) {
@@ -366,7 +408,18 @@ func TestCompareExperience_RemoveResponsibility(t *testing.T) {
 		t.Errorf("Expected update expression to REMOVE values")
 	}
 
-	// TODO: Test that updates are what are expected
+	for key, name := range expr.Names() {
+		if *name == "Responsibilities" {
+			updateStatements := strings.Split(*expr.Update(), "\n")
+			for _, statement := range updateStatements {
+				if strings.Contains(statement, "REMOVE") {
+					if !strings.Contains(statement, fmt.Sprintf("%s[%d]", key, 1)) {
+						t.Fatal("Expected the responsibility at index 1 to be removed, but was not found in the REMOVE statement")
+					}
+				}
+			}
+		}
+	}
 }
 
 func TestCompareExperience_ModifyAndRemoveResponsibility(t *testing.T) {
@@ -429,5 +482,27 @@ func TestCompareExperience_ModifyAndRemoveResponsibility(t *testing.T) {
 		t.Errorf("Expected update expression to REMOVE values")
 	}
 
-	// TODO: Test that updates are what are expected
+	for key, name := range expr.Names() {
+		if *name == "Responsibilities" {
+			updateStatements := strings.Split(*expr.Update(), "\n")
+			for _, statement := range updateStatements {
+				if strings.Contains(statement, "ADD") {
+					if strings.Contains(statement, "REMOVE") {
+						if !strings.Contains(statement, fmt.Sprintf("%s[%d]", key, 1)) {
+							t.Fatal("Expected the responsibility at index 1 to be removed, but was not found in the REMOVE statement")
+						}
+					}
+				} else if strings.Contains(statement, "SET") {
+					if !strings.Contains(statement, key) {
+						t.Fatal("Expected the responsibilities to be updated, but was not found in the SET statement")
+					}
+
+					actualValue := expr.Values()[getValueKey(key, statement)]
+					if experience2.Responsibilities[0] != *actualValue.S {
+						t.Errorf("Expected updated responsibility to be '%s', but was '%s'", experience2.Responsibilities[0], *actualValue.S)
+					}
+				}
+			}
+		}
+	}
 }

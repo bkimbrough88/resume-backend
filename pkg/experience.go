@@ -3,7 +3,6 @@ package pkg
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
 
@@ -63,8 +62,6 @@ func compareExperience(updateBuilder expression.UpdateBuilder, currentExperience
 		}
 	}
 	for responsibilityIdx := currentResponsibilitiesCount; responsibilityIdx < updatedResponsibilitiesCount; responsibilityIdx++ {
-		newResponsibility, _ := dynamodbattribute.MarshalMap(updatedExperience.Responsibilities[responsibilityIdx])
-
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(newResponsibility))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listElementListNameFormat, experience, idx, "Responsibilities", responsibilityIdx)), expression.Value(updatedExperience.Responsibilities[responsibilityIdx]))
 	}
 }
