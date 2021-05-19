@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -11,10 +12,10 @@ func TestCompareCertifications_Matching(t *testing.T) {
 	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
 
 	cert := Certification{
-		Name:        "Some Cert",
-		BadgeLink:   "https://example.com",
+		Name:         "Some Cert",
+		BadgeLink:    "https://example.com",
 		DateAchieved: "10-28-2019",
-		DateExpires: "10-28-2022",
+		DateExpires:  "10-28-2022",
 	}
 
 	compareCertifications(updateBuilder, cert, cert, 0)
@@ -66,17 +67,17 @@ func TestCompareCertifications_NoneMatching(t *testing.T) {
 	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
 
 	cert := Certification{
-		Name:        "Some Cert",
-		BadgeLink:   "https://example.com",
+		Name:         "Some Cert",
+		BadgeLink:    "https://example.com",
 		DateAchieved: "10-28-2019",
-		DateExpires: "10-28-2022",
+		DateExpires:  "10-28-2022",
 	}
 
 	cert2 := Certification{
-		Name:        "Another Cert",
-		BadgeLink:   "https://domain.com",
+		Name:         "Another Cert",
+		BadgeLink:    "https://domain.com",
 		DateAchieved: "12-31-2021",
-		DateExpires: "12-31-2022",
+		DateExpires:  "12-31-2022",
 	}
 
 	compareCertifications(updateBuilder, cert, cert2, 0)
@@ -111,23 +112,38 @@ func TestCompareCertifications_NoneMatching(t *testing.T) {
 		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
+	validateCert(cert2, expr, t, 0)
+}
+
+func validateCert(updatedCert Certification, expr expression.Expression, t *testing.T, idx int) {
+	var certsKey string
 	for key, name := range expr.Names() {
-		actualValue := expr.Values()[getValueKey(key, *expr.Update())]
+		if *name == certifications {
+			certsKey = fmt.Sprintf("%s[%d]", key, idx)
+		}
+	}
+
+	if certsKey == "" {
+		t.Fatalf("Expected to find '%s' in the names list, but it was not there", certifications)
+	}
+
+	for key, name := range expr.Names() {
+		actualValue := expr.Values()[getValueKey(&certsKey, key, *expr.Update())]
 		if *name == "Name" {
-			if cert2.Name != *actualValue.S {
-				t.Errorf("Expected Name to be %s, but was %s", cert2.Name, *actualValue.S)
+			if updatedCert.Name != *actualValue.S {
+				t.Errorf("Expected Name to be %s, but was %s", updatedCert.Name, *actualValue.S)
 			}
 		} else if *name == "DateAchieved" {
-			if cert2.DateAchieved != *actualValue.S {
-				t.Errorf("Expected DateAchieved to be %s, but was %s", cert2.DateAchieved, *actualValue.S)
+			if updatedCert.DateAchieved != *actualValue.S {
+				t.Errorf("Expected DateAchieved to be %s, but was %s", updatedCert.DateAchieved, *actualValue.S)
 			}
 		} else if *name == "BadgeLink" {
-			if cert2.BadgeLink != *actualValue.S {
-				t.Errorf("Expected BadgeLink to be %s, but was %s", cert2.BadgeLink, *actualValue.S)
+			if updatedCert.BadgeLink != *actualValue.S {
+				t.Errorf("Expected BadgeLink to be %s, but was %s", updatedCert.BadgeLink, *actualValue.S)
 			}
 		} else if *name == "DateExpires" {
-			if cert2.DateExpires != *actualValue.S {
-				t.Errorf("Expected DateExpires to be %s, but was %s", cert2.DateExpires, *actualValue.S)
+			if updatedCert.DateExpires != *actualValue.S {
+				t.Errorf("Expected DateExpires to be %s, but was %s", updatedCert.DateExpires, *actualValue.S)
 			}
 		}
 	}

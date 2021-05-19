@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,11 +13,11 @@ func TestCompareDegrees_Matching(t *testing.T) {
 	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
 
 	degree := Degree{
-		Degree: "BS",
-		Major: "CS",
-		School: "University",
+		Degree:    "BS",
+		Major:     "CS",
+		School:    "University",
 		StartYear: 2017,
-		EndYear: 2021,
+		EndYear:   2021,
 	}
 
 	compareDegrees(updateBuilder, degree, degree, 0)
@@ -68,19 +69,19 @@ func TestCompareDegrees_NoneMatching(t *testing.T) {
 	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
 
 	degree := Degree{
-		Degree: "BS",
-		Major: "CS",
-		School: "University",
+		Degree:    "BS",
+		Major:     "CS",
+		School:    "University",
 		StartYear: 2017,
-		EndYear: 2021,
+		EndYear:   2021,
 	}
 
 	degree2 := Degree{
-		Degree: "BA",
-		Major: "CA",
-		School: "College",
+		Degree:    "BA",
+		Major:     "CA",
+		School:    "College",
 		StartYear: 2018,
-		EndYear: 2020,
+		EndYear:   2020,
 	}
 
 	compareDegrees(updateBuilder, degree, degree2, 0)
@@ -115,31 +116,46 @@ func TestCompareDegrees_NoneMatching(t *testing.T) {
 		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
+	validateDegree(degree2, expr, t, 0)
+}
+
+func validateDegree(updatedDegree Degree, expr expression.Expression, t *testing.T, idx int) {
+	var degreesKey string
 	for key, name := range expr.Names() {
-		actualValue := expr.Values()[getValueKey(key, *expr.Update())]
+		if *name == degrees {
+			degreesKey = fmt.Sprintf("%s[%d]", key, idx)
+		}
+	}
+
+	if degreesKey == "" {
+		t.Fatalf("Expected to find '%s' in the names list, but it was not there", degrees)
+	}
+
+	for key, name := range expr.Names() {
+		actualValue := expr.Values()[getValueKey(&degreesKey, key, *expr.Update())]
 		if *name == "Degree" {
-			if degree2.Degree != *actualValue.S {
-				t.Errorf("Expected Degree to be %s, but was %s", degree2.Degree, *actualValue.S)
+			if updatedDegree.Degree != *actualValue.S {
+				t.Errorf("Expected Degree to be %s, but was %s", updatedDegree.Degree, *actualValue.S)
 			}
 		} else if *name == "Major" {
-			if degree2.Major != *actualValue.S {
-				t.Errorf("Expected Major to be %s, but was %s", degree2.Major, *actualValue.S)
+			if updatedDegree.Major != *actualValue.S {
+				t.Errorf("Expected Major to be %s, but was %s", updatedDegree.Major, *actualValue.S)
 			}
 		} else if *name == "School" {
-			if degree2.School != *actualValue.S {
-				t.Errorf("Expected School to be %s, but was %s", degree2.School, *actualValue.S)
+			if updatedDegree.School != *actualValue.S {
+				t.Errorf("Expected School to be %s, but was %s", updatedDegree.School, *actualValue.S)
 			}
 		} else if *name == "StartYear" {
 			if actualNumber, err := strconv.Atoi(*actualValue.N); err != nil {
 				t.Errorf("Could not parse number from '%s'. Error: %s", *actualValue.N, err.Error())
-			} else if degree2.StartYear != actualNumber {
-				t.Errorf("Expected StartYear to be %d, but was %d", degree2.StartYear, actualNumber)
+			} else if updatedDegree.StartYear != actualNumber {
+				t.Errorf("Expected StartYear to be %d, but was %d", updatedDegree.StartYear, actualNumber)
 			}
 		} else if *name == "EndYear" {
 			if actualNumber, err := strconv.Atoi(*actualValue.N); err != nil {
 				t.Errorf("Could not parse number from '%s'. Error: %s", *actualValue.N, err.Error())
-			} else if degree2.EndYear != actualNumber {
-				t.Errorf("Expected EndYear to be %d, but was %d", degree2.EndYear, actualNumber)
+			} else if updatedDegree.EndYear != actualNumber {
+				t.Errorf("Expected EndYear to be %d, but was %d", updatedDegree.EndYear, actualNumber)
 			}
 		}
 	}

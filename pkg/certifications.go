@@ -11,10 +11,10 @@ const (
 )
 
 type Certification struct {
-	Name        string `json:"name"`
+	Name         string `json:"name"`
 	DateAchieved string `json:"date_achieved"`
-	BadgeLink   string `json:"badge_link,omitempty"`
-	DateExpires string `json:"date_expires,omitempty"`
+	BadgeLink    string `json:"badge_link,omitempty"`
+	DateExpires  string `json:"date_expires,omitempty"`
 }
 
 type CertificationKey struct {

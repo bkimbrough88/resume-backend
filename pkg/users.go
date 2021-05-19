@@ -28,7 +28,7 @@ type User struct {
 	Experience     []Experience    `json:"experience,omitempty"`
 	Github         string          `json:"github,omitempty"`
 	GivenName      string          `json:"given_name,omitempty"`
-	LastUpdated    *time.Time	    `json:"last_updated,omitempty"`
+	LastUpdated    *time.Time      `json:"last_updated,omitempty"`
 	Location       string          `json:"location,omitempty"`
 	Linkedin       string          `json:"linkedin,omitempty"`
 	PhoneNumber    string          `json:"phone_number,omitempty"`
@@ -223,12 +223,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 		}
 	}
 	for idx := currentCertsCount; idx < updatedCertsCount; idx++ {
-		newCert, err := dynamodbattribute.MarshalMap(updatedUser.Certifications[idx])
-		if err != nil {
-			return nil, err
-		}
-
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)), expression.Value(newCert))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)), expression.Value(updatedUser.Certifications[idx]))
 	}
 
 	currentDegreesCount := len(currentUser.Degrees)
@@ -241,12 +236,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 		}
 	}
 	for idx := currentDegreesCount; idx < updatedDegreesCount; idx++ {
-		newDegree, err := dynamodbattribute.MarshalMap(updatedUser.Degrees[idx])
-		if err != nil {
-			return nil, err
-		}
-
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(newDegree))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(updatedUser.Degrees[idx]))
 	}
 
 	currentExperienceCount := len(currentUser.Experience)
@@ -259,12 +249,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 		}
 	}
 	for idx := currentExperienceCount; idx < updatedExperienceCount; idx++ {
-		newExperience, err := dynamodbattribute.MarshalMap(updatedUser.Experience[idx])
-		if err != nil {
-			return nil, err
-		}
-
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)), expression.Value(newExperience))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)), expression.Value(updatedUser.Experience[idx]))
 	}
 
 	currentSkillsCount := len(currentUser.Skills)
@@ -277,12 +262,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 		}
 	}
 	for idx := currentSkillsCount; idx < updatedSkillsCount; idx++ {
-		newSkills, err := dynamodbattribute.MarshalMap(updatedUser.Skills[idx])
-		if err != nil {
-			return nil, err
-		}
-
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(newSkills))
+		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(updatedUser.Skills[idx]))
 	}
 
 	return &updateBuilder, nil

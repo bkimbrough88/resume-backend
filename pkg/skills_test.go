@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -106,17 +107,32 @@ func TestCompareSkills_NoneMatching(t *testing.T) {
 		t.FailNow()
 	}
 
+	validateSkill(skill2, expr, t, 0)
+}
+
+func validateSkill(updatedSkill Skill, expr expression.Expression, t *testing.T, idx int) {
+	var skillssKey string
 	for key, name := range expr.Names() {
-		actualValue := expr.Values()[getValueKey(key, *expr.Update())]
+		if *name == skills {
+			skillssKey = fmt.Sprintf("%s[%d]", key, idx)
+		}
+	}
+
+	if skillssKey == "" {
+		t.Fatalf("Expected to find '%s' in the names list, but it was not there", skills)
+	}
+
+	for key, name := range expr.Names() {
+		actualValue := expr.Values()[getValueKey(&skillssKey, key, *expr.Update())]
 		if *name == "Name" {
-			if skill2.Name != *actualValue.S {
-				t.Errorf("Expected Name to be %s, but was %s", skill2.Name, *actualValue.S)
+			if updatedSkill.Name != *actualValue.S {
+				t.Errorf("Expected Name to be %s, but was %s", updatedSkill.Name, *actualValue.S)
 			}
 		} else if *name == "YearsOfExperience" {
 			if actualNumber, err := strconv.Atoi(*actualValue.N); err != nil {
 				t.Errorf("Could not parse number from '%s'. Error: %s", *actualValue.N, err.Error())
-			} else if skill2.YearsOfExperience != actualNumber {
-				t.Errorf("Expected YearsOfExperience to be %d, but was %d", skill2.YearsOfExperience, actualNumber)
+			} else if updatedSkill.YearsOfExperience != actualNumber {
+				t.Errorf("Expected YearsOfExperience to be %d, but was %d", updatedSkill.YearsOfExperience, actualNumber)
 			}
 		}
 	}

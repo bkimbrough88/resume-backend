@@ -13,12 +13,12 @@ func TestCompareExperience_Matching(t *testing.T) {
 	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
 
 	experience1 := Experience{
-		Company:          "Co",
-		JobTitle:         "SRE",
-		StartMonth:       "May",
-		StartYear:        2020,
-		EndMonth: "June",
-		EndYear: 2020,
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
 		Responsibilities: []string{
 			"foo",
 			"bar",
@@ -74,12 +74,12 @@ func TestCompareExperience_NoneMatching(t *testing.T) {
 	updateBuilder := expression.Set(expression.Name("foo"), expression.Value("bar"))
 
 	experience1 := Experience{
-		Company:          "Co",
-		JobTitle:         "SRE",
-		StartMonth:       "May",
-		StartYear:        2020,
-		EndMonth: "June",
-		EndYear: 2020,
+		Company:    "Co",
+		JobTitle:   "SRE",
+		StartMonth: "May",
+		StartYear:  2020,
+		EndMonth:   "June",
+		EndYear:    2020,
 		Responsibilities: []string{
 			"foo",
 			"bar",
@@ -87,12 +87,12 @@ func TestCompareExperience_NoneMatching(t *testing.T) {
 	}
 
 	experience2 := Experience{
-		Company:          "Com",
-		JobTitle:         "Dev",
-		StartMonth:       "July",
-		StartYear:        2021,
-		EndMonth: "October",
-		EndYear: 2021,
+		Company:    "Com",
+		JobTitle:   "Dev",
+		StartMonth: "July",
+		StartYear:  2021,
+		EndMonth:   "October",
+		EndYear:    2021,
 		Responsibilities: []string{
 			"baz",
 			"biz",
@@ -131,39 +131,54 @@ func TestCompareExperience_NoneMatching(t *testing.T) {
 		t.Errorf("Did not expect update expression to REMOVE values")
 	}
 
+	validateExperience(experience2, expr, t, 0)
+}
+
+func validateExperience(updatedExperience Experience, expr expression.Expression, t *testing.T, idx int) {
+	var experienceKey string
 	for key, name := range expr.Names() {
-		actualValue := expr.Values()[getValueKey(key, *expr.Update())]
+		if *name == experience {
+			experienceKey = fmt.Sprintf("%s[%d]", key, idx)
+		}
+	}
+
+	if experienceKey == "" {
+		t.Fatalf("Expected to find '%s' in the names list, but it was not there", experience)
+	}
+
+	for key, name := range expr.Names() {
+		actualValue := expr.Values()[getValueKey(&experienceKey, key, *expr.Update())]
 		if *name == "Company" {
-			if experience2.Company != *actualValue.S {
-				t.Errorf("Expected Company to be %s, but was %s", experience2.Company, *actualValue.S)
+			if updatedExperience.Company != *actualValue.S {
+				t.Errorf("Expected Company to be %s, but was %s", updatedExperience.Company, *actualValue.S)
 			}
 		} else if *name == "JobTitle" {
-			if experience2.JobTitle != *actualValue.S {
-				t.Errorf("Expected JobTitle to be %s, but was %s", experience2.JobTitle, *actualValue.S)
+			if updatedExperience.JobTitle != *actualValue.S {
+				t.Errorf("Expected JobTitle to be %s, but was %s", updatedExperience.JobTitle, *actualValue.S)
 			}
 		} else if *name == "StartMonth" {
-			if experience2.StartMonth != *actualValue.S {
-				t.Errorf("Expected StartMonth to be %s, but was %s", experience2.StartMonth, *actualValue.S)
+			if updatedExperience.StartMonth != *actualValue.S {
+				t.Errorf("Expected StartMonth to be %s, but was %s", updatedExperience.StartMonth, *actualValue.S)
 			}
 		} else if *name == "StartYear" {
 			if actualNumber, err := strconv.Atoi(*actualValue.N); err != nil {
 				t.Errorf("Could not parse number from '%s'. Error: %s", *actualValue.N, err.Error())
-			} else if experience2.StartYear != actualNumber {
-				t.Errorf("Expected StartYear to be %d, but was %d", experience2.StartYear, actualNumber)
+			} else if updatedExperience.StartYear != actualNumber {
+				t.Errorf("Expected StartYear to be %d, but was %d", updatedExperience.StartYear, actualNumber)
 			}
 		} else if *name == "EndMonth" {
-			if experience2.EndMonth != *actualValue.S {
-				t.Errorf("Expected EndMonth to be %s, but was %s", experience2.EndMonth, *actualValue.S)
+			if updatedExperience.EndMonth != *actualValue.S {
+				t.Errorf("Expected EndMonth to be %s, but was %s", updatedExperience.EndMonth, *actualValue.S)
 			}
 		} else if *name == "EndYear" {
 			if actualNumber, err := strconv.Atoi(*actualValue.N); err != nil {
 				t.Errorf("Could not parse number from '%s'. Error: %s", *actualValue.N, err.Error())
-			} else if experience2.EndYear != actualNumber {
-				t.Errorf("Expected EndYear to be %d, but was %d", experience2.EndYear, actualNumber)
+			} else if updatedExperience.EndYear != actualNumber {
+				t.Errorf("Expected EndYear to be %d, but was %d", updatedExperience.EndYear, actualNumber)
 			}
 		} else if *name == "Responsibilities" {
 			found := false
-			for _, expectedResponsibility := range experience2.Responsibilities {
+			for _, expectedResponsibility := range updatedExperience.Responsibilities {
 				if expectedResponsibility == *actualValue.S {
 					found = true
 					continue
@@ -248,7 +263,7 @@ func TestCompareExperience_AddResponsibility(t *testing.T) {
 						t.Fatal("Expected the responsibility to be added, but was not found in the ADD statement")
 					}
 
-					actualValue := expr.Values()[getValueKey(key, statement)]
+					actualValue := expr.Values()[getValueKey(nil, key, statement)]
 					if experience2.Responsibilities[2] != *actualValue.S {
 						t.Errorf("Expected added responsibility to be '%s', but was '%s'", experience2.Responsibilities[2], *actualValue.S)
 					}
@@ -329,7 +344,7 @@ func TestCompareExperience_ModifyAndAddResponsibility(t *testing.T) {
 						t.Fatal("Expected the responsibility to be added, but was not found in the ADD statement")
 					}
 
-					actualValue := expr.Values()[getValueKey(key, statement)]
+					actualValue := expr.Values()[getValueKey(nil, key, statement)]
 					if experience2.Responsibilities[2] != *actualValue.S {
 						t.Errorf("Expected added responsibility to be '%s', but was '%s'", experience2.Responsibilities[2], *actualValue.S)
 					}
@@ -338,7 +353,7 @@ func TestCompareExperience_ModifyAndAddResponsibility(t *testing.T) {
 						t.Fatal("Expected the responsibilities to be updated, but was not found in the SET statement")
 					}
 
-					actualValue := expr.Values()[getValueKey(key, statement)]
+					actualValue := expr.Values()[getValueKey(nil, key, statement)]
 					if experience2.Responsibilities[0] != *actualValue.S {
 						t.Errorf("Expected updated responsibility to be '%s', but was '%s'", experience2.Responsibilities[0], *actualValue.S)
 					}
@@ -497,7 +512,7 @@ func TestCompareExperience_ModifyAndRemoveResponsibility(t *testing.T) {
 						t.Fatal("Expected the responsibilities to be updated, but was not found in the SET statement")
 					}
 
-					actualValue := expr.Values()[getValueKey(key, statement)]
+					actualValue := expr.Values()[getValueKey(nil, key, statement)]
 					if experience2.Responsibilities[0] != *actualValue.S {
 						t.Errorf("Expected updated responsibility to be '%s', but was '%s'", experience2.Responsibilities[0], *actualValue.S)
 					}
