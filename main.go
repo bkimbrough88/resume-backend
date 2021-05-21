@@ -17,9 +17,9 @@ var svc *dynamodb.DynamoDB
 var logger *zap.Logger
 
 type Event struct {
-	Action string       `json:"action"`
-	Id     *string      `json:"id,omitempty"`
-	User   *resume.User `json:"user,omitempty"`
+	Action string          `json:"action"`
+	Key    *resume.UserKey `json:"id,omitempty"`
+	User   *resume.User    `json:"user,omitempty"`
 }
 
 func init() {
@@ -48,12 +48,12 @@ func HandleRequest(request Event) (string, error) {
 
 		return "", nil
 	} else if strings.EqualFold(request.Action, "get") {
-		if request.Id == nil {
-			logger.Error("No id was provided", zap.Any("request", request))
-			return "", fmt.Errorf("no id was provided")
+		if request.Key == nil {
+			logger.Error("No key was provided", zap.Any("request", request))
+			return "", fmt.Errorf("no key was provided")
 		}
 
-		user, err := resume.GetUserById(*request.Id, svc, logger)
+		user, err := resume.GetUserByKey(request.Key, svc, logger)
 		if err != nil {
 			logger.Error("Failed to get user", zap.Error(err), zap.Any("request", request))
 			return "", err
@@ -67,7 +67,7 @@ func HandleRequest(request Event) (string, error) {
 
 		return string(userJson), nil
 	} else if strings.EqualFold(request.Action, "update") {
-		if request.Id == nil {
+		if request.Key == nil {
 			logger.Error("No id was provided", zap.Any("request", request))
 			return "", fmt.Errorf("no id was provided")
 		}
@@ -77,7 +77,7 @@ func HandleRequest(request Event) (string, error) {
 			return "", fmt.Errorf("no user to update was provided")
 		}
 
-		err := resume.UpdateUser(*request.Id, request.User, svc, logger)
+		err := resume.UpdateUser(request.Key, request.User, svc, logger)
 		if err != nil {
 			logger.Error("Failed to update user", zap.Error(err), zap.Any("request", request))
 			return "", err
@@ -85,12 +85,12 @@ func HandleRequest(request Event) (string, error) {
 
 		return "", nil
 	} else if strings.EqualFold(request.Action, "delete") {
-		if request.Id == nil {
+		if request.Key == nil {
 			logger.Error("No id was provided", zap.Any("request", request))
 			return "", fmt.Errorf("no id was provided")
 		}
 
-		err := resume.DeleteUser(*request.Id, svc, logger)
+		err := resume.DeleteUser(request.Key, svc, logger)
 		if err != nil {
 			logger.Error("Failed to delete user", zap.Error(err), zap.Any("request", request))
 			return "", err

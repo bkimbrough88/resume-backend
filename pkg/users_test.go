@@ -3,15 +3,14 @@ package pkg
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
-	"github.com/google/uuid"
 	"strings"
 	"testing"
 )
 
-func TestGetUserUpdateBuilder_Matching(t *testing.T) {
-	uuid1 := uuid.New()
-	user := User{
-		Id: &uuid1,
+var user *User
+
+func setup() {
+	user = &User{
 		Certifications: []Certification{
 			{
 				Name:         "Some Cert",
@@ -58,8 +57,105 @@ func TestGetUserUpdateBuilder_Matching(t *testing.T) {
 		Summary: "My awesome summary",
 		SurName: "Doe",
 	}
+}
 
-	updateBuilder, err := getUserUpdateBuilder(&user, &user)
+func TestCreateUser(t *testing.T) {
+	setup()
+
+}
+
+func TestGetUserPutInput(t *testing.T) {
+	setup()
+
+	if input, err := getUserPutInput(user); err != nil {
+		t.Errorf("Failed to get input with error '%s'", err.Error())
+	} else {
+		if input.TableName == nil {
+			t.Error("Table name should not be nil")
+		} else if *input.TableName != usersTable {
+			t.Errorf("Expected table name to be '%s', but was '%s'", usersTable, *input.TableName)
+		}
+
+		if input.Item == nil {
+			t.Error("User should not have generated an empty map")
+		}
+	}
+}
+
+func TestIsEmail(t *testing.T) {
+	nonEmail1 := ""
+	nonEmail2 := "a@b"
+	nonEmail3 := "not an email"
+	email1 := "user@domain.com"
+	email2 := "a@b.co"
+
+	if isEmail(nonEmail1) {
+		t.Errorf("Determined that '%s' is a valid email and it is not", nonEmail1)
+	}
+
+	if isEmail(nonEmail2) {
+		t.Errorf("Determined that '%s' is a valid email and it is not", nonEmail2)
+	}
+
+	if isEmail(nonEmail3) {
+		t.Errorf("Determined that '%s' is a valid email and it is not", nonEmail3)
+	}
+
+	if !isEmail(email1) {
+		t.Errorf("Determined that '%s' is not a valid email, but it is", email1)
+	}
+
+	if !isEmail(email2) {
+		t.Errorf("Determined that '%s' is not a valid email, but it is", email1)
+	}
+}
+
+func TestGetUserByEmail(t *testing.T) {
+
+}
+
+func TestGetUserScanInput(t *testing.T) {
+	filter := expression.Name("foo").Equal(expression.Value("bar"))
+	if input, err := getUserScanInput(&filter); err != nil {
+		t.Errorf("Failed to get input with error '%s'", err.Error())
+	} else {
+		if input.TableName == nil {
+			t.Error("Table name should not be nil")
+		} else if *input.TableName != usersTable {
+			t.Errorf("Expected table name to be '%s', but was '%s'", usersTable, *input.TableName)
+		}
+
+		if input.FilterExpression == nil {
+			t.Error("Filter should not have generated an empty map")
+		} else if *input.FilterExpression != "#0 = :0" {
+			t.Errorf("Expected filter expression to be '#0 = :0', but ws '%s'", *input.FilterExpression)
+		}
+
+		if len(input.ExpressionAttributeNames) != 1 {
+			t.Errorf("Expected to have 1 attribute name in expression, but got %d", len(input.ExpressionAttributeNames))
+		} else if *input.ExpressionAttributeNames["#0"] != "foo" {
+			t.Errorf("Expected expression attribute name to be 'foo', but was '%s'", *input.ExpressionAttributeNames["#0"])
+		}
+
+		if len(input.ExpressionAttributeValues) != 1 {
+			t.Errorf("Expected to have 1 attribute value in expression, but got %d", len(input.ExpressionAttributeValues))
+		} else if input.ExpressionAttributeValues[":0"].S == nil {
+			t.Error("Expected expression attribute value to be a string type and it was not")
+		} else if *input.ExpressionAttributeValues[":0"].S != "bar" {
+			t.Errorf("Expected expression attribute value to be 'foo', but was '%s'", *input.ExpressionAttributeValues[":0"].S)
+		}
+	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	setup()
+
+}
+
+func TestGetUserUpdateBuilder_Matching(t *testing.T) {
+	setup()
+
+	updateBuilder, err := getUserUpdateBuilder(user, user)
 	if err != nil {
 		t.Fatalf("Did not get update builder. Error: %s", err.Error())
 	}
@@ -100,59 +196,9 @@ func TestGetUserUpdateBuilder_Matching(t *testing.T) {
 }
 
 func TestGetUserUpdateBuilder_NoneMatch(t *testing.T) {
-	uuid1 := uuid.New()
-	user := User{
-		Id: &uuid1,
-		Certifications: []Certification{
-			{
-				Name:         "Some Cert",
-				BadgeLink:    "https://example.com",
-				DateAchieved: "10-28-2019",
-				DateExpires:  "10-28-2022",
-			},
-		},
-		Degrees: []Degree{
-			{
-				Degree:    "BS",
-				Major:     "CS",
-				School:    "University",
-				StartYear: 2017,
-				EndYear:   2021,
-			},
-		},
-		Email: "user@domain.com",
-		Experience: []Experience{
-			{
-				Company:    "Co",
-				JobTitle:   "SRE",
-				StartMonth: "May",
-				StartYear:  2020,
-				EndMonth:   "June",
-				EndYear:    2020,
-				Responsibilities: []string{
-					"foo",
-					"bar",
-				},
-			},
-		},
-		Github:      "https://github.com/user",
-		GivenName:   "John",
-		Location:    "Place, State",
-		Linkedin:    "https://www.linkedin.com/in/user",
-		PhoneNumber: "999-999-9999",
-		Skills: []Skill{
-			{
-				Name:              "Go",
-				YearsOfExperience: 2,
-			},
-		},
-		Summary: "My awesome summary",
-		SurName: "Doe",
-	}
+	setup()
 
-	uuid2 := uuid.New()
-	user2 := User{
-		Id: &uuid2,
+	user2 := &User{
 		Certifications: []Certification{
 			{
 				Name:         "Another Cert",
@@ -200,7 +246,7 @@ func TestGetUserUpdateBuilder_NoneMatch(t *testing.T) {
 		SurName: "Smith",
 	}
 
-	updateBuilder, err := getUserUpdateBuilder(&user, &user2)
+	updateBuilder, err := getUserUpdateBuilder(user, user2)
 	if err != nil {
 		t.Fatalf("Did not get update builder. Error: %s", err.Error())
 	}
@@ -282,57 +328,9 @@ func TestGetUserUpdateBuilder_NoneMatch(t *testing.T) {
 }
 
 func TestGetUserUpdateBuilder_AddLists(t *testing.T) {
-	uuid1 := uuid.New()
-	user := User{
-		Id: &uuid1,
-		Certifications: []Certification{
-			{
-				Name:         "Some Cert",
-				BadgeLink:    "https://example.com",
-				DateAchieved: "10-28-2019",
-				DateExpires:  "10-28-2022",
-			},
-		},
-		Degrees: []Degree{
-			{
-				Degree:    "BS",
-				Major:     "CS",
-				School:    "University",
-				StartYear: 2017,
-				EndYear:   2021,
-			},
-		},
-		Email: "user@domain.com",
-		Experience: []Experience{
-			{
-				Company:    "Co",
-				JobTitle:   "SRE",
-				StartMonth: "May",
-				StartYear:  2020,
-				EndMonth:   "June",
-				EndYear:    2020,
-				Responsibilities: []string{
-					"foo",
-					"bar",
-				},
-			},
-		},
-		Github:      "https://github.com/user",
-		GivenName:   "John",
-		Location:    "Place, State",
-		Linkedin:    "https://www.linkedin.com/in/user",
-		PhoneNumber: "999-999-9999",
-		Skills: []Skill{
-			{
-				Name:              "Go",
-				YearsOfExperience: 2,
-			},
-		},
-		Summary: "My awesome summary",
-		SurName: "Doe",
-	}
-	user2 := User{
-		Id: &uuid1,
+	setup()
+
+	user2 := &User{
 		Certifications: []Certification{
 			{
 				Name:         "Some Cert",
@@ -409,7 +407,7 @@ func TestGetUserUpdateBuilder_AddLists(t *testing.T) {
 		SurName: "Doe",
 	}
 
-	updateBuilder, err := getUserUpdateBuilder(&user, &user2)
+	updateBuilder, err := getUserUpdateBuilder(user, user2)
 	if err != nil {
 		t.Fatalf("Did not get update builder. Error: %s", err.Error())
 	}
@@ -483,57 +481,9 @@ func TestGetUserUpdateBuilder_AddLists(t *testing.T) {
 }
 
 func TestGetUserUpdateBuilder_RemoveLists(t *testing.T) {
-	uuid1 := uuid.New()
-	user := User{
-		Id: &uuid1,
-		Certifications: []Certification{
-			{
-				Name:         "Some Cert",
-				BadgeLink:    "https://example.com",
-				DateAchieved: "10-28-2019",
-				DateExpires:  "10-28-2022",
-			},
-		},
-		Degrees: []Degree{
-			{
-				Degree:    "BS",
-				Major:     "CS",
-				School:    "University",
-				StartYear: 2017,
-				EndYear:   2021,
-			},
-		},
-		Email: "user@domain.com",
-		Experience: []Experience{
-			{
-				Company:    "Co",
-				JobTitle:   "SRE",
-				StartMonth: "May",
-				StartYear:  2020,
-				EndMonth:   "June",
-				EndYear:    2020,
-				Responsibilities: []string{
-					"foo",
-					"bar",
-				},
-			},
-		},
-		Github:      "https://github.com/user",
-		GivenName:   "John",
-		Location:    "Place, State",
-		Linkedin:    "https://www.linkedin.com/in/user",
-		PhoneNumber: "999-999-9999",
-		Skills: []Skill{
-			{
-				Name:              "Go",
-				YearsOfExperience: 2,
-			},
-		},
-		Summary: "My awesome summary",
-		SurName: "Doe",
-	}
-	user2 := User{
-		Id:             &uuid1,
+	setup()
+
+	user2 := &User{
 		Certifications: []Certification{},
 		Degrees:        []Degree{},
 		Email:          "user@domain.com",
@@ -548,7 +498,7 @@ func TestGetUserUpdateBuilder_RemoveLists(t *testing.T) {
 		SurName:        "Doe",
 	}
 
-	updateBuilder, err := getUserUpdateBuilder(&user, &user2)
+	updateBuilder, err := getUserUpdateBuilder(user, user2)
 	if err != nil {
 		t.Fatalf("Did not get update builder. Error: %s", err.Error())
 	}
@@ -617,6 +567,32 @@ func TestGetUserUpdateBuilder_RemoveLists(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+func TestDeleteUser(t *testing.T) {
+
+}
+
+func TestGetUserDeleteInput(t *testing.T) {
+	email := "user@domain.com"
+	key := &UserKey{Email: email}
+	if input, err := getUserDeleteInput(key); err != nil {
+		t.Errorf("Failed to get input with error '%s'", err.Error())
+	} else {
+		if input.TableName == nil {
+			t.Error("Table name should not be nil")
+		} else if *input.TableName != usersTable {
+			t.Errorf("Expected table name to be '%s', but was '%s'", usersTable, *input.TableName)
+		}
+
+		if input.Key == nil {
+			t.Error("User key should not have generated an empty map")
+		} else if input.Key["email"].S == nil {
+			t.Error("Expected email to be a string type")
+		} else if *input.Key["email"].S != email {
+			t.Errorf("Expected email to be '%s', but was '%s'", email, *input.Key["email"].S)
 		}
 	}
 }

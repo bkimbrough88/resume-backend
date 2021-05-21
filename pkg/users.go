@@ -2,13 +2,13 @@ package pkg
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -21,10 +21,9 @@ const (
 )
 
 type User struct {
-	Id             *uuid.UUID      `json:"id"`
+	Email          string          `json:"email"`
 	Certifications []Certification `json:"certifications,omitempty"`
 	Degrees        []Degree        `json:"degrees,omitempty"`
-	Email          string          `json:"email,omitempty"`
 	Experience     []Experience    `json:"experience,omitempty"`
 	Github         string          `json:"github,omitempty"`
 	GivenName      string          `json:"given_name,omitempty"`
@@ -38,16 +37,16 @@ type User struct {
 }
 
 type UserKey struct {
-	Id *uuid.UUID `json:"id"`
+	Email string `json:"email"`
 }
 
 func CreateUser(user *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
-	if user.Id == nil {
-		newUuid := uuid.New()
-		user.Id = &newUuid
+	if isEmail(user.Email) {
+		logger.Error("Email is not a valid email", zap.String("email", user.Email))
+		return fmt.Errorf("invalid email")
 	}
 
-	input, err := getUserPutInput(*user)
+	input, err := getUserPutInput(user)
 	if err != nil {
 		logger.Error("Failed to construct input for create user", zap.Error(err))
 		return err
@@ -63,7 +62,12 @@ func CreateUser(user *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
 	return nil
 }
 
-func getUserPutInput(user User) (*dynamodb.PutItemInput, error) {
+func isEmail(email string) bool {
+	emailRegex := regexp.MustCompile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)])")
+	return emailRegex.MatchString(email)
+}
+
+func getUserPutInput(user *User) (*dynamodb.PutItemInput, error) {
 	item, err := dynamodbattribute.MarshalMap(user)
 	if err != nil {
 		return nil, err
@@ -76,15 +80,9 @@ func getUserPutInput(user User) (*dynamodb.PutItemInput, error) {
 	return input, nil
 }
 
-func GetUserById(idStr string, svc *dynamodb.DynamoDB, logger *zap.Logger) (*User, error) {
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		logger.Error("Failed to parse id", zap.Error(err))
-		return nil, err
-	}
-
-	filter := expression.Name("Id").Equal(expression.Value(id))
-	input, err := getUserScanInput(filter)
+func GetUserByKey(key *UserKey, svc *dynamodb.DynamoDB, logger *zap.Logger) (*User, error) {
+	filter := expression.Name("Email").Equal(expression.Value(key.Email))
+	input, err := getUserScanInput(&filter)
 	if err != nil {
 		logger.Error("Failed to get input to query user table for ID", zap.Error(err))
 		return nil, err
@@ -97,13 +95,13 @@ func GetUserById(idStr string, svc *dynamodb.DynamoDB, logger *zap.Logger) (*Use
 	}
 
 	if *result.Count == 0 {
-		logger.Error("No results found for ID", zap.String("ID", idStr))
+		logger.Error("No results found for email", zap.String("email", key.Email))
 		return nil, fmt.Errorf("no results found")
 	} else if *result.Count > 1 {
-		logger.Error("Too many results found for ID", zap.String("ID", idStr), zap.Int64("resultsReturned", *result.Count))
+		logger.Error("Too many results found for ID", zap.String("email", key.Email), zap.Int64("resultsReturned", *result.Count))
 		return nil, fmt.Errorf("too many results found")
 	} else {
-		logger.Info("Found user for ID", zap.String("ID", idStr))
+		logger.Info("Found user for ID", zap.String("email", key.Email))
 
 		var user User
 		err = dynamodbattribute.UnmarshalMap(result.Items[0], user)
@@ -116,27 +114,44 @@ func GetUserById(idStr string, svc *dynamodb.DynamoDB, logger *zap.Logger) (*Use
 	}
 }
 
-func getUserScanInput(filter expression.ConditionBuilder) (*dynamodb.ScanInput, error) {
-	exp, err := expression.NewBuilder().WithFilter(filter).Build()
+func getUserScanInput(filter *expression.ConditionBuilder) (*dynamodb.ScanInput, error) {
+	exp, err := expression.NewBuilder().WithFilter(*filter).Build()
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName:        aws.String(usersTable),
-		FilterExpression: exp.Filter(),
+		ExpressionAttributeNames:  exp.Names(),
+		ExpressionAttributeValues: exp.Values(),
+		FilterExpression:          exp.Filter(),
+		TableName:                 aws.String(usersTable),
 	}
 	return input, nil
 }
 
-func UpdateUser(idStr string, updatedUser *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		logger.Error("Failed to parse id", zap.Error(err))
-		return err
+func UpdateUser(key *UserKey, updatedUser *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
+	if key.Email != updatedUser.Email {
+		logger.Info("Updating the user's email, must re-create the user")
+
+		if isEmail(updatedUser.Email) {
+			logger.Error("Email is not a valid email", zap.String("email", updatedUser.Email))
+			return fmt.Errorf("invalid email")
+		}
+
+		if err := DeleteUser(key, svc, logger); err != nil {
+			logger.Error("Failed to delete the user from the database")
+			return err
+		}
+
+		if err := CreateUser(updatedUser, svc, logger); err != nil {
+			logger.Error("Failed to re-create the user with the updated user")
+			return err
+		}
+
+		return nil
 	}
 
-	currentUser, err := GetUserById(idStr, svc, logger)
+	currentUser, err := GetUserByKey(key, svc, logger)
 	if err != nil {
 		logger.Error("Failed to get the current user from the database", zap.Error(err))
 		return err
@@ -154,8 +169,7 @@ func UpdateUser(idStr string, updatedUser *User, svc *dynamodb.DynamoDB, logger 
 		return err
 	}
 
-	userKey := UserKey{Id: &id}
-	key, err := dynamodbattribute.MarshalMap(userKey)
+	dynamoKey, err := dynamodbattribute.MarshalMap(key)
 	if err != nil {
 		logger.Error("Failed to convert key into dynamo attribute map", zap.Error(err))
 		return err
@@ -164,7 +178,7 @@ func UpdateUser(idStr string, updatedUser *User, svc *dynamodb.DynamoDB, logger 
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
-		Key:                       key,
+		Key:                       dynamoKey,
 		TableName:                 aws.String(usersTable),
 		UpdateExpression:          expr.Update(),
 	}
@@ -268,14 +282,7 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	return &updateBuilder, nil
 }
 
-func DeleteUser(idStr string, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		logger.Error("Failed to parse id", zap.Error(err))
-		return err
-	}
-
-	key := UserKey{Id: &id}
+func DeleteUser(key *UserKey, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
 	input, err := getUserDeleteInput(key)
 	if err != nil {
 		logger.Error("Failed to get delete input", zap.Error(err))
@@ -291,7 +298,7 @@ func DeleteUser(idStr string, svc *dynamodb.DynamoDB, logger *zap.Logger) error 
 	return nil
 }
 
-func getUserDeleteInput(keyObj UserKey) (*dynamodb.DeleteItemInput, error) {
+func getUserDeleteInput(keyObj *UserKey) (*dynamodb.DeleteItemInput, error) {
 	key, err := dynamodbattribute.MarshalMap(keyObj)
 	if err != nil {
 		return nil, err
