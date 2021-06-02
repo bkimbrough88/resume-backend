@@ -44,7 +44,7 @@ type DynamoService interface {
 	deleteItem(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
 	findItem(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
 	putItem(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
-	updateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
+	updateItem(*dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
 }
 
 type dynamoSvc struct {
@@ -72,7 +72,7 @@ func NewDynamoService(newSvc *dynamodb.DynamoDB) DynamoService {
 }
 
 func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {
-	if isEmail(user.Email) {
+	if !isEmail(user.Email) {
 		logger.Error("Email is not a valid email", zap.String("email", user.Email))
 		return fmt.Errorf("invalid email")
 	}
@@ -89,7 +89,7 @@ func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {
 		return err
 	}
 
-	logger.Info("Successfully inserted new usr into database")
+	logger.Info("Successfully inserted new user into database")
 	return nil
 }
 
@@ -129,19 +129,19 @@ func GetUserByKey(key *UserKey, svc DynamoService, logger *zap.Logger) (*User, e
 		logger.Error("No results found for email", zap.String("email", key.Email))
 		return nil, fmt.Errorf("no results found")
 	} else if *result.Count > 1 {
-		logger.Error("Too many results found for ID", zap.String("email", key.Email), zap.Int64("resultsReturned", *result.Count))
+		logger.Error("Too many results found for email", zap.String("email", key.Email), zap.Int64("resultsReturned", *result.Count))
 		return nil, fmt.Errorf("too many results found")
 	} else {
-		logger.Info("Found user for ID", zap.String("email", key.Email))
+		logger.Info("Found user for email", zap.String("email", key.Email))
 
-		var user User
+		user := &User{}
 		err = dynamodbattribute.UnmarshalMap(result.Items[0], user)
 		if err != nil {
 			logger.Error("Failed to unmarshall dynamo attributes to User object", zap.Error(err))
 			return nil, err
 		}
 
-		return &user, nil
+		return user, nil
 	}
 }
 
@@ -164,7 +164,7 @@ func UpdateUser(key *UserKey, updatedUser *User, svc DynamoService, logger *zap.
 	if key.Email != updatedUser.Email {
 		logger.Info("Updating the user's email, must re-create the user")
 
-		if isEmail(updatedUser.Email) {
+		if !isEmail(updatedUser.Email) {
 			logger.Error("Email is not a valid email", zap.String("email", updatedUser.Email))
 			return fmt.Errorf("invalid email")
 		}
