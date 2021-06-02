@@ -40,7 +40,38 @@ type UserKey struct {
 	Email string `json:"email"`
 }
 
-func CreateUser(user *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
+type DynamoService interface {
+	deleteItem(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
+	findItem(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
+	putItem(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
+	updateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
+}
+
+type dynamoSvc struct {
+	svc *dynamodb.DynamoDB
+}
+
+func (d dynamoSvc) deleteItem(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	return d.svc.DeleteItem(input)
+}
+
+func (d dynamoSvc) findItem(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+	return d.svc.Scan(input)
+}
+
+func (d dynamoSvc) putItem(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	return d.svc.PutItem(input)
+}
+
+func (d dynamoSvc) updateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
+	return d.svc.UpdateItem(input)
+}
+
+func NewDynamoService(newSvc *dynamodb.DynamoDB) DynamoService {
+	return dynamoSvc{ svc: newSvc }
+}
+
+func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {
 	if isEmail(user.Email) {
 		logger.Error("Email is not a valid email", zap.String("email", user.Email))
 		return fmt.Errorf("invalid email")
@@ -52,7 +83,7 @@ func CreateUser(user *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
 		return err
 	}
 
-	_, err = svc.PutItem(input)
+	_, err = svc.putItem(input)
 	if err != nil {
 		logger.Error("Failed to insert new user into database", zap.Error(err))
 		return err
@@ -80,7 +111,7 @@ func getUserPutInput(user *User) (*dynamodb.PutItemInput, error) {
 	return input, nil
 }
 
-func GetUserByKey(key *UserKey, svc *dynamodb.DynamoDB, logger *zap.Logger) (*User, error) {
+func GetUserByKey(key *UserKey, svc DynamoService, logger *zap.Logger) (*User, error) {
 	filter := expression.Name("Email").Equal(expression.Value(key.Email))
 	input, err := getUserScanInput(&filter)
 	if err != nil {
@@ -88,7 +119,7 @@ func GetUserByKey(key *UserKey, svc *dynamodb.DynamoDB, logger *zap.Logger) (*Us
 		return nil, err
 	}
 
-	result, err := svc.Scan(input)
+	result, err := svc.findItem(input)
 	if err != nil {
 		logger.Error("Failed to scan user table for ID", zap.Error(err))
 		return nil, err
@@ -129,7 +160,7 @@ func getUserScanInput(filter *expression.ConditionBuilder) (*dynamodb.ScanInput,
 	return input, nil
 }
 
-func UpdateUser(key *UserKey, updatedUser *User, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
+func UpdateUser(key *UserKey, updatedUser *User, svc DynamoService, logger *zap.Logger) error {
 	if key.Email != updatedUser.Email {
 		logger.Info("Updating the user's email, must re-create the user")
 
@@ -183,7 +214,7 @@ func UpdateUser(key *UserKey, updatedUser *User, svc *dynamodb.DynamoDB, logger 
 		UpdateExpression:          expr.Update(),
 	}
 
-	_, err = svc.UpdateItem(input)
+	_, err = svc.updateItem(input)
 	if err != nil {
 		logger.Error("Failed to update user in database", zap.Error(err))
 		return err
@@ -282,14 +313,14 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	return &updateBuilder, nil
 }
 
-func DeleteUser(key *UserKey, svc *dynamodb.DynamoDB, logger *zap.Logger) error {
+func DeleteUser(key *UserKey, svc DynamoService, logger *zap.Logger) error {
 	input, err := getUserDeleteInput(key)
 	if err != nil {
 		logger.Error("Failed to get delete input", zap.Error(err))
 		return err
 	}
 
-	_, err = svc.DeleteItem(input)
+	_, err = svc.deleteItem(input)
 	if err != nil {
 		logger.Error("Failed to delete user from database", zap.Error(err))
 		return err

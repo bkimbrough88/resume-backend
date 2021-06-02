@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var svc *dynamodb.DynamoDB
+var svc resume.DynamoService
 var logger *zap.Logger
 
 type Event struct {
@@ -30,7 +30,8 @@ func init() {
 	logger = loggerProduction
 
 	sess := session.Must(session.NewSession())
-	svc = dynamodb.New(sess)
+	dynamo := dynamodb.New(sess)
+	svc = resume.NewDynamoService(dynamo)
 }
 
 func HandleRequest(request Event) (string, error) {
