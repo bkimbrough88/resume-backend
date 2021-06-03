@@ -68,7 +68,7 @@ func (d dynamoSvc) updateItem(input *dynamodb.UpdateItemInput) (*dynamodb.Update
 }
 
 func NewDynamoService(newSvc *dynamodb.DynamoDB) DynamoService {
-	return dynamoSvc{ svc: newSvc }
+	return dynamoSvc{svc: newSvc}
 }
 
 func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {

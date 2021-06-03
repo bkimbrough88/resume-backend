@@ -12,16 +12,16 @@ import (
 )
 
 var (
-	user *User
+	user   *User
 	logger *zap.Logger
 
 	deleteItemMock func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
-	findItemMock func(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
-	putItemMock func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
+	findItemMock   func(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
+	putItemMock    func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
 	updateItemMock func(*dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
 )
 
-type dynamoServiceMock struct {}
+type dynamoServiceMock struct{}
 
 func (d dynamoServiceMock) deleteItem(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
 	return deleteItemMock(input)
@@ -103,7 +103,7 @@ func setup(t *testing.T) {
 			Items: []map[string]*dynamodb.AttributeValue{
 				attr,
 			},
-		},  nil
+		}, nil
 	}
 
 	putItemMock = func(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
@@ -183,7 +183,7 @@ func TestIsEmail(t *testing.T) {
 func TestGetUserByKey(t *testing.T) {
 	setup(t)
 
-	key := UserKey{ Email: "user@domain.com" }
+	key := UserKey{Email: "user@domain.com"}
 	svc := dynamoServiceMock{}
 	if res, err := GetUserByKey(&key, svc, logger); err != nil {
 		t.Errorf("Expected to get a user and got the error '%s' instead", err.Error())
@@ -200,7 +200,7 @@ func TestGetUserByKey(t *testing.T) {
 		return &dynamodb.ScanOutput{
 			Count: aws.Int64(0),
 			Items: []map[string]*dynamodb.AttributeValue{},
-		},  nil
+		}, nil
 	}
 	if _, err := GetUserByKey(&key, svc, logger); err == nil {
 		t.Errorf("Found user when none should have been found")
@@ -215,7 +215,7 @@ func TestGetUserByKey(t *testing.T) {
 				{},
 				{},
 			},
-		},  nil
+		}, nil
 	}
 	if _, err := GetUserByKey(&key, svc, logger); err == nil {
 		t.Errorf("Found user when too many should have been found")
@@ -270,18 +270,18 @@ func TestGetUserScanInput(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	setup(t)
 
-	key := &UserKey{ Email: "user@domain.com" }
+	key := &UserKey{Email: "user@domain.com"}
 	svc := dynamoServiceMock{}
 	if err := UpdateUser(key, user, svc, logger); err != nil {
 		t.Errorf("Failed to update user when it should have been successful: %s", err.Error())
 	}
 
-	newKey := &UserKey{ Email: "anotheruser@domain.com" }
+	newKey := &UserKey{Email: "anotheruser@domain.com"}
 	if err := UpdateUser(newKey, user, svc, logger); err != nil {
 		t.Errorf("Failed to update user when it should have been successful: %s", err.Error())
 	}
 
-	badUser := &User{ Email: "not an email" }
+	badUser := &User{Email: "not an email"}
 	if err := UpdateUser(key, badUser, svc, logger); err == nil {
 		t.Errorf("Updated user when it should have failed")
 	} else if err.Error() != "invalid email" {
@@ -721,7 +721,7 @@ func TestGetUserUpdateBuilder_RemoveLists(t *testing.T) {
 func TestDeleteUser(t *testing.T) {
 	setup(t)
 
-	key := UserKey{ Email: "user@domain.com" }
+	key := UserKey{Email: "user@domain.com"}
 	svc := dynamoServiceMock{}
 	if err := DeleteUser(&key, svc, logger); err != nil {
 		t.Errorf("Failed to delete user when it should have been successful: %s", err.Error())

@@ -24,9 +24,9 @@ type Event struct {
 }
 
 type EventResponse struct {
-	StatusCode int `json:"status_code"`
-	Error string `json:"error,omitempty"`
-	User   *resume.User    `json:"user,omitempty"`
+	StatusCode int          `json:"status_code"`
+	Error      string       `json:"error,omitempty"`
+	User       *resume.User `json:"user,omitempty"`
 }
 
 func init() {
@@ -134,7 +134,7 @@ func getErrorResponse(statusCode int, reason string) error {
 func getSuccessResponse(statusCode int, user *resume.User) (string, error) {
 	response := EventResponse{
 		StatusCode: statusCode,
-		User: user,
+		User:       user,
 	}
 
 	if body, err := json.Marshal(response); err != nil {
