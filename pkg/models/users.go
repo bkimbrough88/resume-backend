@@ -1,6 +1,7 @@
-package pkg
+package models
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -8,12 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"go.uber.org/zap"
 )
 
 const (
-	usersTable = "ResumeUsers"
+	UsersTable = "resume_user"
 
 	listNameFormat            = "%s[%d]"
 	listElementNameFormat     = "%s[%d].%s"
@@ -21,6 +23,7 @@ const (
 )
 
 type User struct {
+	UserId         string          `json:"user_id"`
 	Email          string          `json:"email"`
 	Certifications []Certification `json:"certifications,omitempty"`
 	Degrees        []Degree        `json:"degrees,omitempty"`
@@ -37,44 +40,24 @@ type User struct {
 }
 
 type UserKey struct {
-	Email string `json:"email"`
+	UserId string `json:"user_id"`
 }
 
-type DynamoService interface {
-	deleteItem(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
-	findItem(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
-	putItem(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
-	updateItem(*dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
-}
+var (
+	ErrorInvalidEmail   = "invalid email"
+	ErrorInvalidUserId  = "invalid user_id"
+	ErrorNoResultsFound = "no results found"
+)
 
-type dynamoSvc struct {
-	svc *dynamodb.DynamoDB
-}
-
-func (d dynamoSvc) deleteItem(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
-	return d.svc.DeleteItem(input)
-}
-
-func (d dynamoSvc) findItem(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-	return d.svc.Scan(input)
-}
-
-func (d dynamoSvc) putItem(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
-	return d.svc.PutItem(input)
-}
-
-func (d dynamoSvc) updateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
-	return d.svc.UpdateItem(input)
-}
-
-func NewDynamoService(newSvc *dynamodb.DynamoDB) DynamoService {
-	return dynamoSvc{svc: newSvc}
-}
-
-func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {
+func PutUser(user *User, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) error {
 	if !isEmail(user.Email) {
 		logger.Error("Email is not a valid email", zap.String("email", user.Email))
-		return fmt.Errorf("invalid email")
+		return errors.New(ErrorInvalidEmail)
+	}
+
+	if len(user.UserId) == 0 {
+		logger.Error("UserId is empty")
+		return errors.New(ErrorInvalidUserId)
 	}
 
 	input, err := getUserPutInput(user)
@@ -83,7 +66,7 @@ func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {
 		return err
 	}
 
-	_, err = svc.putItem(input)
+	_, err = svc.PutItem(input)
 	if err != nil {
 		logger.Error("Failed to insert new user into database", zap.Error(err))
 		return err
@@ -94,7 +77,7 @@ func CreateUser(user *User, svc DynamoService, logger *zap.Logger) error {
 }
 
 func isEmail(email string) bool {
-	emailRegex := regexp.MustCompile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)])")
+	emailRegex := regexp.MustCompile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)])")
 	return emailRegex.MatchString(email)
 }
 
@@ -106,82 +89,56 @@ func getUserPutInput(user *User) (*dynamodb.PutItemInput, error) {
 
 	input := &dynamodb.PutItemInput{
 		Item:      item,
-		TableName: aws.String(usersTable),
+		TableName: aws.String(UsersTable),
 	}
 	return input, nil
 }
 
-func GetUserByKey(key *UserKey, svc DynamoService, logger *zap.Logger) (*User, error) {
-	filter := expression.Name("Email").Equal(expression.Value(key.Email))
-	input, err := getUserScanInput(&filter)
+func GetUserByKey(key *UserKey, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*User, error) {
+	input, err := getUserGetItemInput(key)
 	if err != nil {
 		logger.Error("Failed to get input to query user table for ID", zap.Error(err))
 		return nil, err
 	}
 
-	result, err := svc.findItem(input)
+	result, err := svc.GetItem(input)
 	if err != nil {
-		logger.Error("Failed to scan user table for ID", zap.Error(err))
+		logger.Error("Failed to get user with key", zap.Error(err), zap.String("user_id", key.UserId))
 		return nil, err
 	}
 
-	if *result.Count == 0 {
-		logger.Error("No results found for email", zap.String("email", key.Email))
-		return nil, fmt.Errorf("no results found")
-	} else if *result.Count > 1 {
-		logger.Error("Too many results found for email", zap.String("email", key.Email), zap.Int64("resultsReturned", *result.Count))
-		return nil, fmt.Errorf("too many results found")
-	} else {
-		logger.Info("Found user for email", zap.String("email", key.Email))
-
-		user := &User{}
-		err = dynamodbattribute.UnmarshalMap(result.Items[0], user)
-		if err != nil {
-			logger.Error("Failed to unmarshall dynamo attributes to User object", zap.Error(err))
-			return nil, err
-		}
-
-		return user, nil
+	if len(result.Item) == 0 {
+		logger.Error("No results found for with key", zap.String("user_id", key.UserId))
+		return nil, errors.New(ErrorNoResultsFound)
 	}
+
+	logger.Info("Found user with key", zap.String("user_id", key.UserId))
+
+	user := &User{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, user)
+	if err != nil {
+		logger.Error("Failed to unmarshall dynamo attributes to User object", zap.Error(err))
+		return nil, err
+	}
+
+	return user, nil
 }
 
-func getUserScanInput(filter *expression.ConditionBuilder) (*dynamodb.ScanInput, error) {
-	exp, err := expression.NewBuilder().WithFilter(*filter).Build()
+func getUserGetItemInput(key *UserKey) (*dynamodb.GetItemInput, error) {
+	keyAttr, err := dynamodbattribute.MarshalMap(key)
 	if err != nil {
 		return nil, err
 	}
 
-	input := &dynamodb.ScanInput{
-		ExpressionAttributeNames:  exp.Names(),
-		ExpressionAttributeValues: exp.Values(),
-		FilterExpression:          exp.Filter(),
-		TableName:                 aws.String(usersTable),
+	input := &dynamodb.GetItemInput{
+		Key:       keyAttr,
+		TableName: aws.String(UsersTable),
 	}
+
 	return input, nil
 }
 
-func UpdateUser(key *UserKey, updatedUser *User, svc DynamoService, logger *zap.Logger) error {
-	if key.Email != updatedUser.Email {
-		logger.Info("Updating the user's email, must re-create the user")
-
-		if !isEmail(updatedUser.Email) {
-			logger.Error("Email is not a valid email", zap.String("email", updatedUser.Email))
-			return fmt.Errorf("invalid email")
-		}
-
-		if err := DeleteUser(key, svc, logger); err != nil {
-			logger.Error("Failed to delete the user from the database")
-			return err
-		}
-
-		if err := CreateUser(updatedUser, svc, logger); err != nil {
-			logger.Error("Failed to re-create the user with the updated user")
-			return err
-		}
-
-		return nil
-	}
-
+func UpdateUser(key *UserKey, updatedUser *User, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) error {
 	currentUser, err := GetUserByKey(key, svc, logger)
 	if err != nil {
 		logger.Error("Failed to get the current user from the database", zap.Error(err))
@@ -210,11 +167,11 @@ func UpdateUser(key *UserKey, updatedUser *User, svc DynamoService, logger *zap.
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		Key:                       dynamoKey,
-		TableName:                 aws.String(usersTable),
+		TableName:                 aws.String(UsersTable),
 		UpdateExpression:          expr.Update(),
 	}
 
-	_, err = svc.updateItem(input)
+	_, err = svc.UpdateItem(input)
 	if err != nil {
 		logger.Error("Failed to update user in database", zap.Error(err))
 		return err
@@ -227,6 +184,9 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	updateBuilder := expression.Set(expression.Name("LastUpdated"), expression.Value(time.Now().UTC()))
 
 	if currentUser.Email != updatedUser.Email {
+		if !isEmail(updatedUser.Email) {
+			return nil, errors.New(ErrorInvalidEmail)
+		}
 		updateBuilder.Set(expression.Name("Email"), expression.Value(updatedUser.Email))
 	}
 
@@ -313,14 +273,14 @@ func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.Upd
 	return &updateBuilder, nil
 }
 
-func DeleteUser(key *UserKey, svc DynamoService, logger *zap.Logger) error {
+func DeleteUser(key *UserKey, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) error {
 	input, err := getUserDeleteInput(key)
 	if err != nil {
 		logger.Error("Failed to get delete input", zap.Error(err))
 		return err
 	}
 
-	_, err = svc.deleteItem(input)
+	_, err = svc.DeleteItem(input)
 	if err != nil {
 		logger.Error("Failed to delete user from database", zap.Error(err))
 		return err
@@ -337,7 +297,7 @@ func getUserDeleteInput(keyObj *UserKey) (*dynamodb.DeleteItemInput, error) {
 
 	input := &dynamodb.DeleteItemInput{
 		Key:       key,
-		TableName: aws.String(usersTable),
+		TableName: aws.String(UsersTable),
 	}
 	return input, nil
 }

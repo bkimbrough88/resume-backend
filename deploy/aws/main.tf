@@ -22,10 +22,6 @@ resource "aws_dynamodb_table" "table" {
     name = "user_id"
     type = "S"
   }
-  attribute {
-    name = "email"
-    type = "S"
-  }
 }
 
 resource "aws_lambda_function" "resume_backend" {
@@ -52,11 +48,9 @@ resource "aws_apigatewayv2_api" "api" {
 resource "aws_apigatewayv2_integration" "resume_backend" {
   api_id                    = aws_apigatewayv2_api.api.id
   connection_type           = "INTERNET"
-  content_handling_strategy = "CONVERT_TO_TEXT"
   integration_type          = "AWS_PROXY"
   integration_method        = "POST"
   integration_uri           = aws_lambda_function.resume_backend.invoke_arn
-  passthrough_behavior      = "WHEN_NO_MATCH"
 }
 
 resource "aws_apigatewayv2_route" "get_user_by_key" {
@@ -67,19 +61,11 @@ resource "aws_apigatewayv2_route" "get_user_by_key" {
   target             = "integrations/${aws_apigatewayv2_integration.resume_backend.id}"
 }
 
-resource "aws_apigatewayv2_route" "create_user" {
+resource "aws_apigatewayv2_route" "put_user" {
   api_id             = aws_apigatewayv2_api.api.id
   authorization_type = "NONE"
-  operation_name     = "Create User"
+  operation_name     = "Put User"
   route_key          = "POST /user"
-  target             = "integrations/${aws_apigatewayv2_integration.resume_backend.id}"
-}
-
-resource "aws_apigatewayv2_route" "update_user" {
-  api_id             = aws_apigatewayv2_api.api.id
-  authorization_type = "NONE"
-  operation_name     = "Update User"
-  route_key          = "PUT /user/{id}"
   target             = "integrations/${aws_apigatewayv2_integration.resume_backend.id}"
 }
 
@@ -95,12 +81,13 @@ resource "aws_apigatewayv2_deployment" "deployment" {
   api_id      = aws_apigatewayv2_api.api.id
   description = "HTTP API for Resume Backend"
   triggers = {
-    redeployment = sha1(join(",", list(
-      jsonencode(aws_apigatewayv2_integration.resume_backend),
-      jsonencode(aws_apigatewayv2_route.get_user_by_key),
-      jsonencode(aws_apigatewayv2_route.create_user),
-      jsonencode(aws_apigatewayv2_route.update_user),
-      jsonencode(aws_apigatewayv2_route.delete_user)
+    redeployment = sha1(join(",", tolist(
+      [
+        jsonencode(aws_apigatewayv2_integration.resume_backend),
+        jsonencode(aws_apigatewayv2_route.get_user_by_key),
+        jsonencode(aws_apigatewayv2_route.put_user),
+        jsonencode(aws_apigatewayv2_route.delete_user)
+      ]
     )))
   }
 

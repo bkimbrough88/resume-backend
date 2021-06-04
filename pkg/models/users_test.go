@@ -1,43 +1,20 @@
-package pkg
+package models
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
+	"strings"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"go.uber.org/zap"
-	"strings"
-	"testing"
 )
 
 var (
 	user   *User
 	logger *zap.Logger
-
-	deleteItemMock func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
-	findItemMock   func(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
-	putItemMock    func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
-	updateItemMock func(*dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error)
 )
-
-type dynamoServiceMock struct{}
-
-func (d dynamoServiceMock) deleteItem(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
-	return deleteItemMock(input)
-}
-
-func (d dynamoServiceMock) findItem(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-	return findItemMock(input)
-}
-
-func (d dynamoServiceMock) putItem(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
-	return putItemMock(input)
-}
-
-func (d dynamoServiceMock) updateItem(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
-	return updateItemMock(input)
-}
 
 func setup(t *testing.T) {
 	logger, _ = zap.NewDevelopment()
@@ -87,9 +64,10 @@ func setup(t *testing.T) {
 		},
 		Summary: "My awesome summary",
 		SurName: "Doe",
+		UserId:  "user1",
 	}
 
-	deleteItemMock = func(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	DeleteItemMock = func(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
 		return &dynamodb.DeleteItemOutput{}, nil
 	}
 
@@ -97,20 +75,15 @@ func setup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to marshal user int Dynamo attribute map: %s", err.Error())
 	}
-	findItemMock = func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-		return &dynamodb.ScanOutput{
-			Count: aws.Int64(1),
-			Items: []map[string]*dynamodb.AttributeValue{
-				attr,
-			},
-		}, nil
+	GetItemMock = func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+		return &dynamodb.GetItemOutput{Item: attr}, nil
 	}
 
-	putItemMock = func(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	PutItemMock = func(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
 		return &dynamodb.PutItemOutput{}, nil
 	}
 
-	updateItemMock = func(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
+	UpdateItemMock = func(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
 		return &dynamodb.UpdateItemOutput{}, nil
 	}
 }
@@ -118,16 +91,16 @@ func setup(t *testing.T) {
 func TestCreateUser(t *testing.T) {
 	setup(t)
 
-	svc := dynamoServiceMock{}
-	if err := CreateUser(user, svc, logger); err != nil {
+	svc := DynamoServiceMock{}
+	if err := PutUser(user, svc, logger); err != nil {
 		t.Errorf("Failed to create user when it should have been successful: %s", err.Error())
 	}
 
 	expectedError := "some error"
-	putItemMock = func(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+	PutItemMock = func(input *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
 		return nil, fmt.Errorf(expectedError)
 	}
-	if err := CreateUser(user, svc, logger); err == nil {
+	if err := PutUser(user, svc, logger); err == nil {
 		t.Errorf("Created user when it should have failed")
 	} else if err.Error() != expectedError {
 		t.Errorf("Expected error to be '%s', but was '%s'", expectedError, err.Error())
@@ -142,8 +115,8 @@ func TestGetUserPutInput(t *testing.T) {
 	} else {
 		if input.TableName == nil {
 			t.Error("Table name should not be nil")
-		} else if *input.TableName != usersTable {
-			t.Errorf("Expected table name to be '%s', but was '%s'", usersTable, *input.TableName)
+		} else if *input.TableName != UsersTable {
+			t.Errorf("Expected table name to be '%s', but was '%s'", UsersTable, *input.TableName)
 		}
 
 		if input.Item == nil {
@@ -183,8 +156,8 @@ func TestIsEmail(t *testing.T) {
 func TestGetUserByKey(t *testing.T) {
 	setup(t)
 
-	key := UserKey{Email: "user@domain.com"}
-	svc := dynamoServiceMock{}
+	key := UserKey{UserId: "username"}
+	svc := DynamoServiceMock{}
 	if res, err := GetUserByKey(&key, svc, logger); err != nil {
 		t.Errorf("Expected to get a user and got the error '%s' instead", err.Error())
 	} else if res == nil {
@@ -196,10 +169,9 @@ func TestGetUserByKey(t *testing.T) {
 		// TODO: Check the rest of the fields
 	}
 
-	findItemMock = func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-		return &dynamodb.ScanOutput{
-			Count: aws.Int64(0),
-			Items: []map[string]*dynamodb.AttributeValue{},
+	GetItemMock = func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+		return &dynamodb.GetItemOutput{
+			Item: map[string]*dynamodb.AttributeValue{},
 		}, nil
 	}
 	if _, err := GetUserByKey(&key, svc, logger); err == nil {
@@ -208,61 +180,34 @@ func TestGetUserByKey(t *testing.T) {
 		t.Errorf("Expected error to be 'no results found', but was '%s'", err.Error())
 	}
 
-	findItemMock = func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-		return &dynamodb.ScanOutput{
-			Count: aws.Int64(2),
-			Items: []map[string]*dynamodb.AttributeValue{
-				{},
-				{},
-			},
-		}, nil
-	}
-	if _, err := GetUserByKey(&key, svc, logger); err == nil {
-		t.Errorf("Found user when too many should have been found")
-	} else if err.Error() != "too many results found" {
-		t.Errorf("Expected error to be 'too many results found', but was '%s'", err.Error())
-	}
-
 	expectedError := "some error"
-	findItemMock = func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+	GetItemMock = func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 		return nil, fmt.Errorf(expectedError)
 	}
 	if _, err := GetUserByKey(&key, svc, logger); err == nil {
-		t.Errorf("Created user when it should have failed")
+		t.Errorf("Found user when it should have failed")
 	} else if err.Error() != expectedError {
 		t.Errorf("Expected error to be '%s', but was '%s'", expectedError, err.Error())
 	}
 }
 
-func TestGetUserScanInput(t *testing.T) {
-	filter := expression.Name("foo").Equal(expression.Value("bar"))
-	if input, err := getUserScanInput(&filter); err != nil {
+func TestGetUserGetItemInput(t *testing.T) {
+	key := &UserKey{UserId: "username"}
+	if input, err := getUserGetItemInput(key); err != nil {
 		t.Errorf("Failed to get input with error '%s'", err.Error())
 	} else {
 		if input.TableName == nil {
 			t.Error("Table name should not be nil")
-		} else if *input.TableName != usersTable {
-			t.Errorf("Expected table name to be '%s', but was '%s'", usersTable, *input.TableName)
+		} else if *input.TableName != UsersTable {
+			t.Errorf("Expected table name to be '%s', but was '%s'", UsersTable, *input.TableName)
 		}
 
-		if input.FilterExpression == nil {
-			t.Error("Filter should not have generated an empty map")
-		} else if *input.FilterExpression != "#0 = :0" {
-			t.Errorf("Expected filter expression to be '#0 = :0', but ws '%s'", *input.FilterExpression)
-		}
-
-		if len(input.ExpressionAttributeNames) != 1 {
-			t.Errorf("Expected to have 1 attribute name in expression, but got %d", len(input.ExpressionAttributeNames))
-		} else if *input.ExpressionAttributeNames["#0"] != "foo" {
-			t.Errorf("Expected expression attribute name to be 'foo', but was '%s'", *input.ExpressionAttributeNames["#0"])
-		}
-
-		if len(input.ExpressionAttributeValues) != 1 {
-			t.Errorf("Expected to have 1 attribute value in expression, but got %d", len(input.ExpressionAttributeValues))
-		} else if input.ExpressionAttributeValues[":0"].S == nil {
-			t.Error("Expected expression attribute value to be a string type and it was not")
-		} else if *input.ExpressionAttributeValues[":0"].S != "bar" {
-			t.Errorf("Expected expression attribute value to be 'foo', but was '%s'", *input.ExpressionAttributeValues[":0"].S)
+		if input.Key == nil {
+			t.Error("User key should not have generated an empty map")
+		} else if input.Key["user_id"].S == nil {
+			t.Error("Expected user_id to be a string type")
+		} else if *input.Key["user_id"].S != key.UserId {
+			t.Errorf("Expected user_id to be '%s', but was '%s'", key.UserId, *input.Key["user_id"].S)
 		}
 	}
 }
@@ -270,13 +215,13 @@ func TestGetUserScanInput(t *testing.T) {
 func TestUpdateUser(t *testing.T) {
 	setup(t)
 
-	key := &UserKey{Email: "user@domain.com"}
-	svc := dynamoServiceMock{}
+	key := &UserKey{UserId: "user1"}
+	svc := DynamoServiceMock{}
 	if err := UpdateUser(key, user, svc, logger); err != nil {
 		t.Errorf("Failed to update user when it should have been successful: %s", err.Error())
 	}
 
-	newKey := &UserKey{Email: "anotheruser@domain.com"}
+	newKey := &UserKey{UserId: "user2"}
 	if err := UpdateUser(newKey, user, svc, logger); err != nil {
 		t.Errorf("Failed to update user when it should have been successful: %s", err.Error())
 	}
@@ -289,7 +234,7 @@ func TestUpdateUser(t *testing.T) {
 	}
 
 	expectedError := "some error"
-	updateItemMock = func(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
+	UpdateItemMock = func(input *dynamodb.UpdateItemInput) (*dynamodb.UpdateItemOutput, error) {
 		return nil, fmt.Errorf(expectedError)
 	}
 	if err := UpdateUser(key, user, svc, logger); err == nil {
@@ -721,17 +666,17 @@ func TestGetUserUpdateBuilder_RemoveLists(t *testing.T) {
 func TestDeleteUser(t *testing.T) {
 	setup(t)
 
-	key := UserKey{Email: "user@domain.com"}
-	svc := dynamoServiceMock{}
-	if err := DeleteUser(&key, svc, logger); err != nil {
+	key := &UserKey{UserId: "username"}
+	svc := DynamoServiceMock{}
+	if err := DeleteUser(key, svc, logger); err != nil {
 		t.Errorf("Failed to delete user when it should have been successful: %s", err.Error())
 	}
 
 	expectedError := "some error"
-	deleteItemMock = func(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+	DeleteItemMock = func(input *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
 		return nil, fmt.Errorf(expectedError)
 	}
-	if err := DeleteUser(&key, svc, logger); err == nil {
+	if err := DeleteUser(key, svc, logger); err == nil {
 		t.Errorf("Deleted user when it should have failed")
 	} else if err.Error() != expectedError {
 		t.Errorf("Expected error to be '%s', but was '%s'", expectedError, err.Error())
@@ -739,23 +684,22 @@ func TestDeleteUser(t *testing.T) {
 }
 
 func TestGetUserDeleteInput(t *testing.T) {
-	email := "user@domain.com"
-	key := &UserKey{Email: email}
+	key := &UserKey{UserId: "username"}
 	if input, err := getUserDeleteInput(key); err != nil {
 		t.Errorf("Failed to get input with error '%s'", err.Error())
 	} else {
 		if input.TableName == nil {
 			t.Error("Table name should not be nil")
-		} else if *input.TableName != usersTable {
-			t.Errorf("Expected table name to be '%s', but was '%s'", usersTable, *input.TableName)
+		} else if *input.TableName != UsersTable {
+			t.Errorf("Expected table name to be '%s', but was '%s'", UsersTable, *input.TableName)
 		}
 
 		if input.Key == nil {
 			t.Error("User key should not have generated an empty map")
-		} else if input.Key["email"].S == nil {
-			t.Error("Expected email to be a string type")
-		} else if *input.Key["email"].S != email {
-			t.Errorf("Expected email to be '%s', but was '%s'", email, *input.Key["email"].S)
+		} else if input.Key["user_id"].S == nil {
+			t.Error("Expected user_id to be a string type")
+		} else if *input.Key["user_id"].S != key.UserId {
+			t.Errorf("Expected user_id to be '%s', but was '%s'", key.UserId, *input.Key["user_id"].S)
 		}
 	}
 }

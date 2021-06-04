@@ -25,9 +25,11 @@ provider "archive" {}
 
 provider "aws" {
   region = var.aws_region
-  default_tags = {
-    app       = "resume"
-    component = "backend"
-    managedBy = "Terraform"
+  default_tags {
+    tags = {
+      app = "resume"
+      component = "backend"
+      managedBy = "Terraform"
+    }
   }
 }
