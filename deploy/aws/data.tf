@@ -1,3 +1,7 @@
+data "aws_route53_zone" "zone" {
+  name = var.base_domain_name
+}
+
 data "aws_iam_policy_document" "lambda_assumer" {
   statement {
     effect  = "Allow"

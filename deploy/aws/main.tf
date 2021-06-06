@@ -115,3 +115,82 @@ resource "aws_apigatewayv2_stage" "v1" {
   deployment_id = aws_apigatewayv2_deployment.deployment.id
   name          = "v1"
 }
+
+locals {
+  cfn_origin = "resumeBackend"
+  domain_name = "resume-api.${var.base_domain_name}"
+}
+
+resource "aws_acm_certificate" "cert" {
+  provider = aws.usea1
+
+  domain_name       = local.domain_name
+  validation_method = "EMAIL"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_acm_certificate_validation" "validate" {
+  provider = aws.usea1
+
+  certificate_arn = aws_acm_certificate.cert.arn
+}
+
+resource "aws_cloudfront_distribution" "dist" {
+  depends_on = [aws_acm_certificate_validation.validate]
+
+  aliases = [local.domain_name]
+  enabled = true
+  price_class = "PriceClass_100"
+
+  default_cache_behavior {
+    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods = ["GET", "HEAD"]
+    min_ttl = 0
+    default_ttl = 3600
+    max_ttl = 86400
+    target_origin_id = local.cfn_origin
+    viewer_protocol_policy = "redirect-to-https"
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+  }
+  origin {
+    domain_name = replace(aws_apigatewayv2_api.api.api_endpoint, "/^https?://([^/]*).*/", "$1")
+    origin_id = local.cfn_origin
+
+    custom_origin_config {
+      http_port = 80
+      https_port = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols = ["TLSv1.2"]
+    }
+  }
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+  viewer_certificate {
+    acm_certificate_arn = aws_acm_certificate.cert.arn
+    minimum_protocol_version = "TLSv1.2_2018"
+    ssl_support_method = "sni-only"
+  }
+}
+
+resource "aws_route53_record" "A" {
+  name = local.domain_name
+  type = "A"
+  zone_id = data.aws_route53_zone.zone.zone_id
+
+  alias {
+    evaluate_target_health = false
+    name = aws_cloudfront_distribution.dist.domain_name
+    zone_id = aws_cloudfront_distribution.dist.hosted_zone_id
+  }
+}

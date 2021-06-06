@@ -33,3 +33,15 @@ provider "aws" {
     }
   }
 }
+
+provider "aws" {
+  alias = "usea1"
+  region = "us-east-1"
+  default_tags {
+    tags = {
+      app = "resume"
+      component = "backend"
+      managedBy = "Terraform"
+    }
+  }
+}
