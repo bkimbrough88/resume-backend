@@ -45,6 +45,18 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 }
 
+resource "aws_apigatewayv2_authorizer" "auth" {
+  api_id = aws_apigatewayv2_api.api.id
+  authorizer_type = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name = "auth0"
+
+  jwt_configuration {
+    audience = [var.auth0_audience]
+    issuer = "https://${var.auth0_domain}/"
+  }
+}
+
 resource "aws_apigatewayv2_integration" "resume_backend" {
   api_id                    = aws_apigatewayv2_api.api.id
   connection_type           = "INTERNET"
@@ -63,7 +75,8 @@ resource "aws_apigatewayv2_route" "get_user_by_key" {
 
 resource "aws_apigatewayv2_route" "put_user" {
   api_id             = aws_apigatewayv2_api.api.id
-  authorization_type = "NONE"
+  authorizer_id = aws_apigatewayv2_authorizer.auth.id
+  authorization_type = "JWT"
   operation_name     = "Put User"
   route_key          = "POST /user"
   target             = "integrations/${aws_apigatewayv2_integration.resume_backend.id}"
@@ -71,7 +84,8 @@ resource "aws_apigatewayv2_route" "put_user" {
 
 resource "aws_apigatewayv2_route" "delete_user" {
   api_id             = aws_apigatewayv2_api.api.id
-  authorization_type = "NONE"
+  authorizer_id = aws_apigatewayv2_authorizer.auth.id
+  authorization_type = "JWT"
   operation_name     = "Delete User"
   route_key          = "DELETE /user/{id}"
   target             = "integrations/${aws_apigatewayv2_integration.resume_backend.id}"
