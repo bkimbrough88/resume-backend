@@ -8,8 +8,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func apiResponse(status int, body interface{}, logger *zap.Logger) (*events.APIGatewayV2HTTPResponse, error) {
-	resp := events.APIGatewayV2HTTPResponse{Headers: map[string]string{"Content-Type": "application/json"}}
+func apiResponse(status int, body interface{}, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
+	resp := events.APIGatewayProxyResponse{Headers: map[string]string{"Content-Type": "application/json"}}
 	resp.StatusCode = status
 
 	stringBody, err := json.Marshal(body)

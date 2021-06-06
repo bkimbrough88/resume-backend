@@ -20,7 +20,7 @@ type ErrorBody struct {
 	ErrorMsg *string `json:"error,omitempty"`
 }
 
-func GetUser(req events.APIGatewayV2HTTPRequest, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*events.APIGatewayV2HTTPResponse, error) {
+func GetUser(req events.APIGatewayProxyRequest, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
 	userId := req.PathParameters["id"]
 	if len(userId) > 0 {
 		key := &models.UserKey{UserId: userId}
@@ -35,7 +35,7 @@ func GetUser(req events.APIGatewayV2HTTPRequest, svc dynamodbiface.DynamoDBAPI, 
 	}
 }
 
-func PutUser(req events.APIGatewayV2HTTPRequest, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*events.APIGatewayV2HTTPResponse, error) {
+func PutUser(req events.APIGatewayProxyRequest, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
 	if len(req.Body) > 0 {
 		user := &models.User{}
 		if err := json.Unmarshal([]byte(req.Body), user); err != nil {
@@ -53,7 +53,7 @@ func PutUser(req events.APIGatewayV2HTTPRequest, svc dynamodbiface.DynamoDBAPI, 
 	}
 }
 
-func DeleteUser(req events.APIGatewayV2HTTPRequest, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*events.APIGatewayV2HTTPResponse, error) {
+func DeleteUser(req events.APIGatewayProxyRequest, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
 	userId := req.PathParameters["id"]
 	if len(userId) > 0 {
 		key := &models.UserKey{UserId: userId}
@@ -67,7 +67,7 @@ func DeleteUser(req events.APIGatewayV2HTTPRequest, svc dynamodbiface.DynamoDBAP
 	}
 }
 
-func UnhandledMethod(req events.APIGatewayV2HTTPRequest, logger *zap.Logger) (*events.APIGatewayV2HTTPResponse, error) {
-	logger.Warn("Method not allowed", zap.String("method", req.RequestContext.HTTP.Method))
+func UnhandledMethod(req events.APIGatewayProxyRequest, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
+	logger.Warn("Method not allowed", zap.String("method", req.HTTPMethod))
 	return apiResponse(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"), logger)
 }

@@ -37,9 +37,9 @@ func main() {
 	lambda.Start(handler)
 }
 
-func handler(req events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
+func handler(req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	logger.Info("Received request", zap.Any("request", req))
-	switch req.RequestContext.HTTP.Method {
+	switch req.HTTPMethod {
 	case "GET":
 		return handlers.GetUser(req, svc, logger)
 	case "POST":
