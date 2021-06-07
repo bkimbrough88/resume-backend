@@ -13,7 +13,7 @@ vet:
 
 .PHONY: test
 test:
-	go test ./.../
+	go test ./.../ -tags=test
 
 .PHONY: build
 build: clean test

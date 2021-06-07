@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/bkimbrough88/resume-backend/pkg/models"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -22,11 +23,11 @@ func apiResponse(status int, body interface{}, logger *zap.Logger) (*events.APIG
 }
 
 func getErrorStatusCode(err error) int {
-	if err.Error() == "invalid email" || err.Error() == "invalid user_id" {
+	if err.Error() == models.ErrorInvalidEmail || err.Error() == models.ErrorInvalidUserId {
 		return http.StatusBadRequest
 	}
 
-	if err.Error() == "no results found" {
+	if err.Error() == models.ErrorNoResultsFound {
 		return http.StatusNotFound
 	}
 

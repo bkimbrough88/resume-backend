@@ -27,7 +27,7 @@ provider "aws" {
   region = var.aws_region
   default_tags {
     tags = {
-      app = "resume"
+      app       = "resume"
       component = "backend"
       managedBy = "Terraform"
     }
@@ -35,11 +35,11 @@ provider "aws" {
 }
 
 provider "aws" {
-  alias = "usea1"
+  alias  = "usea1"
   region = "us-east-1"
   default_tags {
     tags = {
-      app = "resume"
+      app       = "resume"
       component = "backend"
       managedBy = "Terraform"
     }

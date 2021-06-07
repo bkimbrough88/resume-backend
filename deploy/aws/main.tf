@@ -46,23 +46,23 @@ resource "aws_apigatewayv2_api" "api" {
 }
 
 resource "aws_apigatewayv2_authorizer" "auth" {
-  api_id = aws_apigatewayv2_api.api.id
-  authorizer_type = "JWT"
+  api_id           = aws_apigatewayv2_api.api.id
+  authorizer_type  = "JWT"
   identity_sources = ["$request.header.Authorization"]
-  name = "auth0"
+  name             = "auth0"
 
   jwt_configuration {
     audience = [var.auth0_audience]
-    issuer = "https://${var.auth0_domain}/"
+    issuer   = "https://${var.auth0_domain}/"
   }
 }
 
 resource "aws_apigatewayv2_integration" "resume_backend" {
-  api_id                    = aws_apigatewayv2_api.api.id
-  connection_type           = "INTERNET"
-  integration_type          = "AWS_PROXY"
-  integration_method        = "POST"
-  integration_uri           = aws_lambda_function.resume_backend.invoke_arn
+  api_id             = aws_apigatewayv2_api.api.id
+  connection_type    = "INTERNET"
+  integration_type   = "AWS_PROXY"
+  integration_method = "POST"
+  integration_uri    = aws_lambda_function.resume_backend.invoke_arn
 }
 
 resource "aws_apigatewayv2_route" "get_user_by_key" {
@@ -75,7 +75,7 @@ resource "aws_apigatewayv2_route" "get_user_by_key" {
 
 resource "aws_apigatewayv2_route" "put_user" {
   api_id             = aws_apigatewayv2_api.api.id
-  authorizer_id = aws_apigatewayv2_authorizer.auth.id
+  authorizer_id      = aws_apigatewayv2_authorizer.auth.id
   authorization_type = "JWT"
   operation_name     = "Put User"
   route_key          = "POST /user"
@@ -84,7 +84,7 @@ resource "aws_apigatewayv2_route" "put_user" {
 
 resource "aws_apigatewayv2_route" "delete_user" {
   api_id             = aws_apigatewayv2_api.api.id
-  authorizer_id = aws_apigatewayv2_authorizer.auth.id
+  authorizer_id      = aws_apigatewayv2_authorizer.auth.id
   authorization_type = "JWT"
   operation_name     = "Delete User"
   route_key          = "DELETE /user/{id}"
@@ -117,7 +117,7 @@ resource "aws_apigatewayv2_stage" "v1" {
 }
 
 locals {
-  cfn_origin = "resumeBackend"
+  cfn_origin  = "resumeBackend"
   domain_name = "resume-api.${var.base_domain_name}"
 }
 
@@ -141,17 +141,17 @@ resource "aws_acm_certificate_validation" "validate" {
 resource "aws_cloudfront_distribution" "dist" {
   depends_on = [aws_acm_certificate_validation.validate]
 
-  aliases = [local.domain_name]
-  enabled = true
+  aliases     = [local.domain_name]
+  enabled     = true
   price_class = "PriceClass_100"
 
   default_cache_behavior {
-    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods = ["GET", "HEAD"]
-    min_ttl = 0
-    default_ttl = 3600
-    max_ttl = 86400
-    target_origin_id = local.cfn_origin
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
+    target_origin_id       = local.cfn_origin
     viewer_protocol_policy = "redirect-to-https"
     forwarded_values {
       query_string = false
@@ -162,13 +162,13 @@ resource "aws_cloudfront_distribution" "dist" {
   }
   origin {
     domain_name = replace(aws_apigatewayv2_api.api.api_endpoint, "/^https?://([^/]*).*/", "$1")
-    origin_id = local.cfn_origin
+    origin_id   = local.cfn_origin
 
     custom_origin_config {
-      http_port = 80
-      https_port = 443
+      http_port              = 80
+      https_port             = 443
       origin_protocol_policy = "https-only"
-      origin_ssl_protocols = ["TLSv1.2"]
+      origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
   restrictions {
@@ -177,20 +177,20 @@ resource "aws_cloudfront_distribution" "dist" {
     }
   }
   viewer_certificate {
-    acm_certificate_arn = aws_acm_certificate.cert.arn
+    acm_certificate_arn      = aws_acm_certificate.cert.arn
     minimum_protocol_version = "TLSv1.2_2018"
-    ssl_support_method = "sni-only"
+    ssl_support_method       = "sni-only"
   }
 }
 
 resource "aws_route53_record" "A" {
-  name = local.domain_name
-  type = "A"
+  name    = local.domain_name
+  type    = "A"
   zone_id = data.aws_route53_zone.zone.zone_id
 
   alias {
     evaluate_target_health = false
-    name = aws_cloudfront_distribution.dist.domain_name
-    zone_id = aws_cloudfront_distribution.dist.hosted_zone_id
+    name                   = aws_cloudfront_distribution.dist.domain_name
+    zone_id                = aws_cloudfront_distribution.dist.hosted_zone_id
   }
 }

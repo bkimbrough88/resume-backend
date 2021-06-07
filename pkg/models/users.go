@@ -2,24 +2,19 @@ package models
 
 import (
 	"errors"
-	"fmt"
-	"regexp"
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"go.uber.org/zap"
+	"regexp"
 )
 
 const (
-	UsersTable = "resume_user"
-
-	listNameFormat            = "%s[%d]"
-	listElementNameFormat     = "%s[%d].%s"
-	listElementListNameFormat = "%s[%d].%s[%d]"
+	ErrorInvalidEmail   = "invalid email"
+	ErrorInvalidUserId  = "invalid user_id"
+	ErrorNoResultsFound = "no results found"
+	UsersTable          = "resume_user"
 )
 
 type User struct {
@@ -30,7 +25,6 @@ type User struct {
 	Experience     []Experience    `json:"experience,omitempty"`
 	Github         string          `json:"github,omitempty"`
 	GivenName      string          `json:"given_name,omitempty"`
-	LastUpdated    *time.Time      `json:"last_updated,omitempty"`
 	Location       string          `json:"location,omitempty"`
 	Linkedin       string          `json:"linkedin,omitempty"`
 	PhoneNumber    string          `json:"phone_number,omitempty"`
@@ -42,12 +36,6 @@ type User struct {
 type UserKey struct {
 	UserId string `json:"user_id"`
 }
-
-var (
-	ErrorInvalidEmail   = "invalid email"
-	ErrorInvalidUserId  = "invalid user_id"
-	ErrorNoResultsFound = "no results found"
-)
 
 func PutUser(user *User, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) error {
 	if !isEmail(user.Email) {
@@ -136,141 +124,6 @@ func getUserGetItemInput(key *UserKey) (*dynamodb.GetItemInput, error) {
 	}
 
 	return input, nil
-}
-
-func UpdateUser(key *UserKey, updatedUser *User, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) error {
-	currentUser, err := GetUserByKey(key, svc, logger)
-	if err != nil {
-		logger.Error("Failed to get the current user from the database", zap.Error(err))
-		return err
-	}
-
-	updateBuilder, err := getUserUpdateBuilder(currentUser, updatedUser)
-	if err != nil {
-		logger.Error("Failed to construct update", zap.Error(err))
-		return err
-	}
-
-	expr, err := expression.NewBuilder().WithUpdate(*updateBuilder).Build()
-	if err != nil {
-		logger.Error("Failed to build update expression", zap.Error(err))
-		return err
-	}
-
-	dynamoKey, err := dynamodbattribute.MarshalMap(key)
-	if err != nil {
-		logger.Error("Failed to convert key into dynamo attribute map", zap.Error(err))
-		return err
-	}
-
-	input := &dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Key:                       dynamoKey,
-		TableName:                 aws.String(UsersTable),
-		UpdateExpression:          expr.Update(),
-	}
-
-	_, err = svc.UpdateItem(input)
-	if err != nil {
-		logger.Error("Failed to update user in database", zap.Error(err))
-		return err
-	}
-
-	return nil
-}
-
-func getUserUpdateBuilder(currentUser *User, updatedUser *User) (*expression.UpdateBuilder, error) {
-	updateBuilder := expression.Set(expression.Name("LastUpdated"), expression.Value(time.Now().UTC()))
-
-	if currentUser.Email != updatedUser.Email {
-		if !isEmail(updatedUser.Email) {
-			return nil, errors.New(ErrorInvalidEmail)
-		}
-		updateBuilder.Set(expression.Name("Email"), expression.Value(updatedUser.Email))
-	}
-
-	if currentUser.Github != updatedUser.Github {
-		updateBuilder.Set(expression.Name("Github"), expression.Value(updatedUser.Github))
-	}
-
-	if currentUser.GivenName != updatedUser.GivenName {
-		updateBuilder.Set(expression.Name("GivenName"), expression.Value(updatedUser.GivenName))
-	}
-
-	if currentUser.Location != updatedUser.Location {
-		updateBuilder.Set(expression.Name("Location"), expression.Value(updatedUser.Location))
-	}
-
-	if currentUser.Linkedin != updatedUser.Linkedin {
-		updateBuilder.Set(expression.Name("Linkedin"), expression.Value(updatedUser.Linkedin))
-	}
-
-	if currentUser.PhoneNumber != updatedUser.PhoneNumber {
-		updateBuilder.Set(expression.Name("PhoneNumber"), expression.Value(updatedUser.PhoneNumber))
-	}
-
-	if currentUser.Summary != updatedUser.Summary {
-		updateBuilder.Set(expression.Name("Summary"), expression.Value(updatedUser.Summary))
-	}
-
-	if currentUser.SurName != updatedUser.SurName {
-		updateBuilder.Set(expression.Name("SurName"), expression.Value(updatedUser.SurName))
-	}
-
-	currentCertsCount := len(currentUser.Certifications)
-	updatedCertsCount := len(updatedUser.Certifications)
-	for idx, currentCert := range currentUser.Certifications {
-		if idx < updatedCertsCount {
-			compareCertifications(updateBuilder, currentCert, updatedUser.Certifications[idx], idx)
-		} else {
-			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
-		}
-	}
-	for idx := currentCertsCount; idx < updatedCertsCount; idx++ {
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)), expression.Value(updatedUser.Certifications[idx]))
-	}
-
-	currentDegreesCount := len(currentUser.Degrees)
-	updatedDegreesCount := len(updatedUser.Degrees)
-	for idx, currentDegree := range currentUser.Degrees {
-		if idx < updatedDegreesCount {
-			compareDegrees(updateBuilder, currentDegree, updatedUser.Degrees[idx], idx)
-		} else {
-			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)))
-		}
-	}
-	for idx := currentDegreesCount; idx < updatedDegreesCount; idx++ {
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(updatedUser.Degrees[idx]))
-	}
-
-	currentExperienceCount := len(currentUser.Experience)
-	updatedExperienceCount := len(updatedUser.Experience)
-	for idx, currentExperience := range currentUser.Experience {
-		if idx < updatedExperienceCount {
-			compareExperience(updateBuilder, currentExperience, updatedUser.Experience[idx], idx)
-		} else {
-			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)))
-		}
-	}
-	for idx := currentExperienceCount; idx < updatedExperienceCount; idx++ {
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, experience, idx)), expression.Value(updatedUser.Experience[idx]))
-	}
-
-	currentSkillsCount := len(currentUser.Skills)
-	updatedSkillsCount := len(updatedUser.Skills)
-	for idx, currentSkill := range currentUser.Skills {
-		if idx < updatedSkillsCount {
-			compareSkills(updateBuilder, currentSkill, updatedUser.Skills[idx], idx)
-		} else {
-			updateBuilder.Remove(expression.Name(fmt.Sprintf(listNameFormat, certifications, idx)))
-		}
-	}
-	for idx := currentSkillsCount; idx < updatedSkillsCount; idx++ {
-		updateBuilder.Add(expression.Name(fmt.Sprintf(listNameFormat, degrees, idx)), expression.Value(updatedUser.Skills[idx]))
-	}
-
-	return &updateBuilder, nil
 }
 
 func DeleteUser(key *UserKey, svc dynamodbiface.DynamoDBAPI, logger *zap.Logger) error {

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"go.uber.org/zap"
 	"net/http"
 
@@ -10,6 +9,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/bkimbrough88/resume-backend/pkg/models"
+)
+
+const (
+	ErrorMethodNotAllowed  = "method not allowed"
+	ErrorUserIdNotProvided = "userId not provided"
+	ErrorUserNotProvided   = "user not provided in body"
 )
 
 type SuccessBody struct {
@@ -31,7 +36,7 @@ func GetUser(req events.APIGatewayProxyRequest, svc dynamodbiface.DynamoDBAPI, l
 
 		return apiResponse(http.StatusOK, SuccessBody{User: user}, logger)
 	} else {
-		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String("userId not provided")}, logger)
+		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String(ErrorUserIdNotProvided)}, logger)
 	}
 }
 
@@ -49,7 +54,7 @@ func PutUser(req events.APIGatewayProxyRequest, svc dynamodbiface.DynamoDBAPI, l
 
 		return apiResponse(http.StatusAccepted, SuccessBody{}, logger)
 	} else {
-		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String("user not provided in body")}, logger)
+		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String(ErrorUserNotProvided)}, logger)
 	}
 }
 
@@ -63,11 +68,11 @@ func DeleteUser(req events.APIGatewayProxyRequest, svc dynamodbiface.DynamoDBAPI
 
 		return apiResponse(http.StatusAccepted, SuccessBody{}, logger)
 	} else {
-		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String("userId not provided")}, logger)
+		return apiResponse(http.StatusBadRequest, ErrorBody{aws.String(ErrorUserIdNotProvided)}, logger)
 	}
 }
 
 func UnhandledMethod(req events.APIGatewayProxyRequest, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
 	logger.Warn("Method not allowed", zap.String("method", req.HTTPMethod))
-	return apiResponse(http.StatusMethodNotAllowed, fmt.Errorf("method not allowed"), logger)
+	return apiResponse(http.StatusMethodNotAllowed, ErrorBody{ErrorMsg: aws.String(ErrorMethodNotAllowed)}, logger)
 }

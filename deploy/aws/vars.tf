@@ -1,13 +1,13 @@
 variable "auth0_domain" {
-  type = string
+  type        = string
   description = "Domain for Auth0 JWT authorizer"
-  default = "dev-2usxzn4i.us.auth0.com"
+  default     = "dev-2usxzn4i.us.auth0.com"
 }
 
 variable "auth0_audience" {
-  type = string
+  type        = string
   description = "The audience for the authorizor"
-  default = "https://auth0-jwt-authorizer"
+  default     = "https://auth0-jwt-authorizer"
 }
 
 variable "aws_region" {
@@ -17,7 +17,7 @@ variable "aws_region" {
 }
 
 variable "base_domain_name" {
-  type = string
+  type        = string
   description = "The base domain name for the hosted zone"
-  default = "thekimbroughs.net"
+  default     = "thekimbroughs.net"
 }

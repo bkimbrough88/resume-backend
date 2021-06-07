@@ -1,4 +1,6 @@
-package models
+// +build test
+
+package pkg
 
 import (
 	"errors"

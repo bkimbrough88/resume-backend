@@ -15,7 +15,7 @@ data "aws_iam_policy_document" "lambda_assumer" {
 
 data "aws_iam_policy_document" "lambda_permissions" {
   statement {
-    sid = "ReadWriteTable"
+    sid    = "ReadWriteTable"
     effect = "Allow"
     actions = [
       "dynamodb:BatchGetItem",
@@ -27,17 +27,17 @@ data "aws_iam_policy_document" "lambda_permissions" {
       "dynamodb:PutItem",
       "dynamodb:UpdateItem"
     ]
-    resources = [ aws_dynamodb_table.table.arn ]
+    resources = [aws_dynamodb_table.table.arn]
   }
   statement {
-    sid = "LambdaLogs"
+    sid    = "LambdaLogs"
     effect = "Allow"
     actions = [
       "logs:CreateLogStream",
       "logs:PutLogEvents",
       "logs:CreateLogGroup"
     ]
-    resources = [ "*" ]
+    resources = ["*"]
   }
 }
 
