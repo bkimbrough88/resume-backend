@@ -106,13 +106,13 @@ jobs:
         id: tag
         uses: mathieudutour/github-tag-action@v5.5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GH_PAT }}
 
       - name: GitHub Release
         id: release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           tag_name: ${{ steps.tag.outputs.new_tag }}
           release_name: Resume Backend ${{ steps.tag.outputs.new_version }}
