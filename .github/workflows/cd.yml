@@ -2,7 +2,7 @@ name: Resume Backend CD
 on:
   push:
     tags:
-      - 'v*'
+      - '*'
 jobs:
   release:
     name: Release
