@@ -10,9 +10,11 @@ jobs:
     needs: setup
     runs-on: ubuntu-20.04
     env:
-      TF_IN_AUTOMATION: true
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       GOOS: linux
       GOARCH: amd64
+      TF_IN_AUTOMATION: true
     steps:
       - name: Git Checkout
         uses: actions/checkout@v2
