@@ -1,4 +1,4 @@
-BINARY_PATH=_build/bin/resume-backend
+BINARY_PATH=build/bin/resume-backend
 
 .PHONY: clean fmt build
 all: clean fmt build

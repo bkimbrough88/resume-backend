@@ -1,0 +1,116 @@
+name: Resume Backend CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  build:
+    name: Build
+    needs: setup
+    runs-on: ubuntu-20.04
+    env:
+      TF_IN_AUTOMATION: true
+      GOOS: linux
+      GOARCH: amd64
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v2
+
+      # Build Go App
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.15'
+
+      - name: Run Unit Tests
+        run: go test -tags=test ./.../
+
+      - name: Build Function
+        run: go build -o build/bin/resume-backend main.go
+
+      # Run AWS Terraform
+      - name: Get Terraform Version
+        id: tf_version
+        run: echo "::set-output name=terraform-version::$(<deploy/.terraform-version)"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: ${{ steps.tf_version.outputs.terraform-version }}
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: AWS Terraform Init
+        id: aws_tf_init
+        run: terraform init -input=false
+        working-directory: deploy/aws
+
+      - name: AWS Terraform Validate
+        id: aws_tf_validate
+        run: terraform validate -no-color
+        working-directory: deploy/aws
+
+      - name: AWS Terraform Refresh
+        id: aws_tf_refresh
+        run: terraform refresh -lock-timeout=300s
+
+      - name: AWS Terraform Plan
+        id: aws_tf_plan
+        run: |
+          terraform plan \
+            -no-color \
+            -input=false \
+            -refresh=false \
+            -lock-timeout=300s
+
+      - name: PR Comment
+        uses: actions/github-script@v3.1
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform plan for AWS: \`${{ steps.tf_plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform
+            ${{ steps.clean_plan.outputs.stdout }}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+  release:
+    name: Release Tag
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Increment Tag
+        id: tag
+        uses: mathieudutour/github-tag-action@v5.5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: GitHub Release
+        id: release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
+          release_name: Resume Backend ${{ steps.tag_version.outputs.new_version }}
+          body: ${{ steps.tag_version.outputs.changelog }}
