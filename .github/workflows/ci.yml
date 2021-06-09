@@ -54,6 +54,7 @@ jobs:
       - name: AWS Terraform Refresh
         id: aws_tf_refresh
         run: terraform refresh -lock-timeout=300s
+        working-directory: deploy/aws
 
       - name: AWS Terraform Plan
         id: aws_tf_plan
@@ -63,6 +64,7 @@ jobs:
             -input=false \
             -refresh=false \
             -lock-timeout=300s
+        working-directory: deploy/aws
 
       - name: PR Comment
         uses: actions/github-script@v3.1
