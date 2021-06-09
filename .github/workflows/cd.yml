@@ -43,11 +43,6 @@ jobs:
         run: terraform init -input=false
         working-directory: deploy/aws
 
-      - name: AWS Terraform Refresh
-        id: aws_tf_refresh
-        run: terraform refresh -lock-timeout=300s
-        working-directory: deploy/aws
-
       - name: AWS Terraform Apply
         id: aws_tf_apply
         run: |
@@ -55,6 +50,5 @@ jobs:
             -auto-approve \
             -var=function_base_path=../../dist/resume-backend_linux_amd64/resume-backend
             -input=false \
-            -refresh=false \
             -lock-timeout=300s
         working-directory: deploy/aws

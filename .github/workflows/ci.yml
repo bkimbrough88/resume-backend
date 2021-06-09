@@ -59,7 +59,7 @@ jobs:
 
       - name: AWS Terraform Refresh
         id: aws_tf_refresh
-        run: terraform refresh -lock-timeout=300s
+        run: terraform refresh -lock-timeout=300s -var=function_base_path=../../dist/resume-backend_linux_amd64/resume-backend
         working-directory: deploy/aws
 
       - name: AWS Terraform Plan
