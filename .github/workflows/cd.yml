@@ -48,7 +48,7 @@ jobs:
         run: |
           terraform apply \
             -auto-approve \
-            -var=function_base_path=../../dist/resume-backend_linux_amd64/resume-backend
+            -var=function_base_path=../../dist/resume-backend_linux_amd64
             -input=false \
             -lock-timeout=300s
         working-directory: deploy/aws
