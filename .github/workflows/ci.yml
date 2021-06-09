@@ -73,12 +73,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform plan for AWS: \`${{ steps.tf_plan.outcome }}\`
+            const output = `#### Terraform plan for AWS: \`${{ steps.aws_tf_plan.outcome }}\`
 
             <details><summary>Show Plan</summary>
 
             \`\`\`terraform
-            ${{ steps.clean_plan.outputs.stdout }}
+            ${{ steps.aws_tf_plan.outputs.stdout }}
             \`\`\`
 
             </details>
