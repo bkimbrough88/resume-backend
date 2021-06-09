@@ -67,7 +67,7 @@ jobs:
         run: |
           terraform plan \
             -no-color \
-            -var=function_base_path=../../dist/resume-backend_linux_amd64
+            -var=function_base_path=../../dist/resume-backend_linux_amd64 \
             -input=false \
             -refresh=false \
             -lock-timeout=300s
