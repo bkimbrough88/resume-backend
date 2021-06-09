@@ -1,0 +1,16 @@
+project_name: Resume Backend
+archive:
+  - id: resume-backend
+    builds:
+      - resume-backend
+    format: zip
+builds:
+  - id: resume-backend
+    main: './main.go'
+    binary: build/bin/resume-backend
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64

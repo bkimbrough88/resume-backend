@@ -42,7 +42,7 @@ data "aws_iam_policy_document" "lambda_permissions" {
 }
 
 data "archive_file" "zip" {
-  output_path = "../../_build/resume-backend.zip"
-  source_file = "../../_build/bin/resume-backend"
+  output_path = "../../build/resume-backend.zip"
+  source_file = "../../build/bin/resume-backend"
   type        = "zip"
 }
