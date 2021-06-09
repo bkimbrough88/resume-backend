@@ -21,3 +21,9 @@ variable "base_domain_name" {
   description = "The base domain name for the hosted zone"
   default     = "thekimbroughs.net"
 }
+
+variable "function_base_path" {
+  type = string
+  description = "The path to the function's binary"
+  default = "../../build/bin"
+}

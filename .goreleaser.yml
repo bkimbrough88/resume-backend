@@ -7,7 +7,7 @@ archives:
 builds:
   - id: resume-backend
     main: './main.go'
-    binary: build/bin/resume-backend
+    binary: resume-backend
     env:
       - CGO_ENABLED=0
     goos:

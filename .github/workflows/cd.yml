@@ -53,6 +53,7 @@ jobs:
         run: |
           terraform apply \
             -auto-approve \
+            -var=function_base_path=../../dist/resume-backend_linux_amd64/resume-backend
             -input=false \
             -refresh=false \
             -lock-timeout=300s
