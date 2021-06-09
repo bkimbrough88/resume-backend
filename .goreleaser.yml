@@ -1,5 +1,5 @@
-project_name: Resume Backend
-archive:
+project_name: ResumeBackend
+archives:
   - id: resume-backend
     builds:
       - resume-backend
@@ -7,7 +7,7 @@ archive:
 builds:
   - id: resume-backend
     main: './main.go'
-    binary: build/bin/resume-backend
+    binary: resume-backend
     env:
       - CGO_ENABLED=0
     goos:
