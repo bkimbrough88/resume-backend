@@ -1,6 +1,11 @@
 name: Check PR title
 on:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
 jobs:
   lint:
     runs-on: ubuntu-latest
