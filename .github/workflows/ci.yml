@@ -104,7 +104,7 @@ jobs:
   auto-merge:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]'
+    if: github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]'
     steps:
       - uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
