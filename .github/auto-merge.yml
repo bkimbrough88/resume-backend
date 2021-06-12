@@ -1,11 +1,11 @@
 - match:
-    dependency_name: github-actions
+    dependency_type: development
     update_type: all
 
 - match:
-    dependency_name: gomod
+    dependency_type: production
     update_type: semver:minor
 
 - match:
-    dependency_name: terraform
-    update_type: semver:minor
+    dependency_type: production
+    update_type: security:all
