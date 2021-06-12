@@ -1,0 +1,11 @@
+- match:
+    dependency_name: github-actions
+    update_type: all
+
+- match:
+    dependency_name: gomod
+    update_type: semver:minor
+
+- match:
+    dependency_name: terraform
+    update_type: semver:minor
