@@ -108,6 +108,7 @@ jobs:
     steps:
       - uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
+          config: .github/auto-merge.yml
           github-token: ${{ secrets.GH_PAT }}
   release:
     name: Release Tag
