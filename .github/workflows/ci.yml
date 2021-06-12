@@ -10,7 +10,6 @@ jobs:
     name: Build
     runs-on: ubuntu-20.04
     # If the PR is coming from a fork (pull_request_target), ensure it's opened by "dependabot[bot]".
-    # Otherwise, clone it normally.
     if: |
       (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]') ||
       (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]')
@@ -105,7 +104,7 @@ jobs:
   auto-merge:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]'
+    if: github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]'
     steps:
       - uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
