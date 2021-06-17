@@ -43,6 +43,12 @@ resource "aws_lambda_permission" "apigw" {
 resource "aws_apigatewayv2_api" "api" {
   name          = "resume-api"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_headers = ["Authorization"]
+    allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
+    allow_origins = ["*"] // TODO: Make this restrict to https://brandon.thekimbroughs.net once we're done testing with it
+  }
 }
 
 resource "aws_apigatewayv2_authorizer" "auth" {
