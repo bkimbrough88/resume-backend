@@ -10,7 +10,14 @@ import (
 )
 
 func apiResponse(status int, body interface{}, logger *zap.Logger) (*events.APIGatewayProxyResponse, error) {
-	resp := events.APIGatewayProxyResponse{Headers: map[string]string{"Content-Type": "application/json"}}
+	resp := events.APIGatewayProxyResponse{
+		Headers: map[string]string{
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Headers": "Authorization",
+			"Access-Control-Allow-Methods": "GET, POST, OPTIONS, DELETE",
+			"Content-Type": "application/json",
+		},
+	}
 	resp.StatusCode = status
 
 	stringBody, err := json.Marshal(body)
