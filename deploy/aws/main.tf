@@ -164,6 +164,11 @@ resource "aws_cloudfront_distribution" "dist" {
       cookies {
         forward = "none"
       }
+      headers = [
+        "Access-Control-Request-Headers",
+        "Access-Control-Request-Method",
+        "Origin"
+      ]
     }
   }
   origin {
