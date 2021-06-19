@@ -144,6 +144,34 @@ resource "aws_acm_certificate_validation" "validate" {
   certificate_arn = aws_acm_certificate.cert.arn
 }
 
+resource "aws_cloudfront_cache_policy" "cors" {
+  name        = "CORS Policy"
+  comment     = "Same as Managed-CachingOptimized, but allow CORS headers"
+  default_ttl = 86400
+  max_ttl     = 31536000
+  min_ttl     = 1
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = [
+          "Access-Control-Request-Headers",
+          "Access-Control-Request-Method",
+          "Authorization",
+          "Origin"
+        ]
+      }
+    }
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "dist" {
   depends_on = [aws_acm_certificate_validation.validate]
 
@@ -153,23 +181,13 @@ resource "aws_cloudfront_distribution" "dist" {
 
   default_cache_behavior {
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods         = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD", "OPTIONS"]
+    cache_policy_id        = aws_cloudfront_cache_policy.cors.id
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
     target_origin_id       = local.cfn_origin
     viewer_protocol_policy = "redirect-to-https"
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-      headers = [
-        "Access-Control-Request-Headers",
-        "Access-Control-Request-Method",
-        "Origin"
-      ]
-    }
   }
   origin {
     domain_name = replace(aws_apigatewayv2_api.api.api_endpoint, "/^https?://([^/]*).*/", "$1")
