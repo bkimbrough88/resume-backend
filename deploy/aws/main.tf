@@ -145,7 +145,7 @@ resource "aws_acm_certificate_validation" "validate" {
 }
 
 resource "aws_cloudfront_cache_policy" "cors" {
-  name        = "CORS Policy"
+  name        = "CORS_Policy"
   comment     = "Same as Managed-CachingOptimized, but allow CORS headers"
   default_ttl = 86400
   max_ttl     = 31536000
