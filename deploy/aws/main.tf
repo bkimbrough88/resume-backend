@@ -183,9 +183,10 @@ resource "aws_cloudfront_distribution" "dist" {
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD", "OPTIONS"]
     cache_policy_id        = aws_cloudfront_cache_policy.cors.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.cors.id
     min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
+    default_ttl            = 60
+    max_ttl                = 120
     target_origin_id       = local.cfn_origin
     viewer_protocol_policy = "redirect-to-https"
   }
