@@ -41,6 +41,10 @@ data "aws_iam_policy_document" "lambda_permissions" {
   }
 }
 
+data "aws_cloudfront_origin_request_policy" "cors" {
+  name = "Managed-CORS-S3Origin"
+}
+
 data "archive_file" "zip" {
   output_path = "${var.function_base_path}/resume-backend.zip"
   source_file = "${var.function_base_path}/resume-backend"
