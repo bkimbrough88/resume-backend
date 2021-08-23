@@ -77,7 +77,7 @@ jobs:
         working-directory: deploy/aws
 
       - name: PR Comment
-        uses: actions/github-script@v4.0.2
+        uses: actions/github-script@v4.1
         if: always() && github.event_name == 'pull_request'
         continue-on-error: true
         with:
