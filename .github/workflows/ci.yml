@@ -123,7 +123,7 @@ jobs:
 
       - name: Increment Tag
         id: tag
-        uses: mathieudutour/github-tag-action@v5.5
+        uses: mathieudutour/github-tag-action@v5.6
         with:
           github_token: ${{ secrets.GH_PAT }}
 
